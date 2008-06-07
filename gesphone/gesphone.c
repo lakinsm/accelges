@@ -22,6 +22,7 @@
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 
 #include "ges.h"
@@ -47,7 +48,7 @@ static unsigned char parse_options(int argc, char **argv);
 static void handle_signal(int signal);
 
 /* this handler is called whenever the Wii sends acceleration reports */
-void handle_accel(struct accel_3d_t accel)
+void handle_accel(unsigned char pressed, struct accel_3d_t accel)
 {
 	/* further call the recognizer */
 	ges_process_3d(&ges, accel);
@@ -72,7 +73,6 @@ int main(int argc, char **argv)
 	}
 	printf("Configuration loaded.\n");
 	ges_create_3d(&ges);
-	//ges_populate_3d(&ges);
 	ges_read_3d(&ges, &config);
 	
 	wii.handle_accel = handle_accel;
@@ -192,7 +192,6 @@ static void handle_signal(int signal)
 			wii_set_leds(&wii, 1, 0, 0, 0);
 			wii_disconnect(&wii);
 			printf("Disconnected.\n");
-			//ges_write_3d(&ges, &config);
 			ges_delete_3d(&ges);
 			fflush(stdout);
 			fflush(stderr);

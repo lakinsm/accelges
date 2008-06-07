@@ -23,7 +23,4 @@
 
 #include "ges.h"
 
-/* handler called by the Wii whenever new acceleration reports arrive */
-typedef void (* handle_accel_3d_t)(struct accel_3d_t accel);
-
 #endif /*GESPHONE_H_*/

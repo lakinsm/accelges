@@ -8,16 +8,19 @@
         <tool superClass="cdt.managedbuild.tool.gnu.c.compiler.exe.debug" id="cdt.managedbuild.tool.gnu.c.compiler.exe.debug.1024657831" name="GCC C Compiler">
           <option superClass="gnu.c.compiler.option.include.paths" id="gnu.c.compiler.option.include.paths.1964647457" valueType="includePath">
             <listOptionValue value="&quot;${workspace_loc:/ges}&quot;" builtIn="false"/>
+            <listOptionValue value="&quot;${workspace_loc:/wii}&quot;" builtIn="false"/>
           </option>
         </tool>
         <tool superClass="cdt.managedbuild.tool.gnu.c.linker.exe.debug" id="cdt.managedbuild.tool.gnu.c.linker.exe.debug.2038255316" name="GCC C Linker">
           <option superClass="gnu.c.link.option.libs" id="gnu.c.link.option.libs.2017994534" valueType="libs">
             <listOptionValue value="bluetooth" builtIn="false"/>
+            <listOptionValue value="wii" builtIn="false"/>
             <listOptionValue value="m" builtIn="false"/>
             <listOptionValue value="ges" builtIn="false"/>
           </option>
           <option superClass="gnu.c.link.option.paths" id="gnu.c.link.option.paths.1604645454" valueType="stringList">
             <listOptionValue value="&quot;${workspace_loc:/ges/Debug}&quot;" builtIn="false"/>
+            <listOptionValue value="&quot;${workspace_loc:/wii/Debug}&quot;" builtIn="false"/>
           </option>
         </tool>
         <tool superClass="cdt.managedbuild.tool.gnu.cpp.linker.exe.debug" id="cdt.managedbuild.tool.gnu.cpp.linker.exe.debug.1165285202" name="GCC C++ Linker"/>
