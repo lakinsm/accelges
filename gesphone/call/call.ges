@@ -1,0 +1,9 @@
+# accelerometer-based gestures configuration file
+
+# classifier classes (required)
+noise	noise.gauss
+motion	motion.gauss
+
+#hmm gestures
+hmm	answer-call	ac.hmm
+hmm	hang-up-call	huc.hmm
