@@ -29,15 +29,29 @@
 #define FRAME_LEN 30000
 #define FRAME_DIF 5
 
+/* configuration type */
 typedef struct config_t {
 	char noise_file_name[1024];
 	char motion_file_name[1024];
 } config_t;
 
+#ifndef ACCEL_T
+#define ACCEL_T
+/* acceleration type */
 typedef struct accel_3d_t {
 	float val[3];
 } accel_3d_t;
+#endif
 
+/* sequence type */
+typedef struct seq_3d_t {
+	struct accel_3d_t each[FRAME_LEN];
+	unsigned int index;
+	unsigned int begin;
+	unsigned int end;
+} frame_t;
+
+/* gesture type */
 typedef struct ges_3d_t {
 	struct accel_3d_t frame[FRAME_LEN];
 	unsigned int index;
@@ -61,5 +75,7 @@ void ges_write_3d(struct ges_3d_t *ges, struct config_t *config);
 unsigned char ges_load_config(struct config_t *config, char *file_name);
 /* process accelerometer values */
 void ges_process_3d(struct ges_3d_t *ges, struct accel_3d_t accel);
+
+void ges_loop_seq_3d(struct seq_3d_t *seq, struct accel_3d_t accel);
 
 #endif /*GES_H_*/

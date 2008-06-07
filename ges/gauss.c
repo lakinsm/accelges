@@ -25,6 +25,8 @@
 
 #include "gauss.h"
 
+#define MAX_ACCEL_VAL 4
+
 /* matrix determinant of size 3x3 */
 static float mat_det_3d(float mat[3][3]);
 /* matrix inverse of size 3x3 */
@@ -83,6 +85,27 @@ float gauss_prob_den_3d(struct gauss_3d_t *gauss, struct sample_3d_t sample)
 float gauss_disc_3d(struct gauss_3d_t *gauss, struct sample_3d_t sample, float prior_prob)
 {
 	return logf(gauss_prob_den_3d(gauss, sample)) + logf(prior_prob);
+}
+
+/*
+ * 
+ */
+void gauss_rand_3d(struct gauss_3d_t *gauss)
+{
+	int i, j;
+	
+	for (i = 0; i < 3; i++)
+	{
+		gauss->mean[i] = rand() % MAX_ACCEL_VAL;
+	}
+	
+	for (i = 0; i < 3; i++)
+	{
+		for (j = 0; j < 3; j++)
+		{
+			gauss->covar[i][j] = rand() % MAX_ACCEL_VAL;
+		}
+	}
 }
 
 /*
@@ -210,6 +233,51 @@ void gauss_mix_den_est_3d(struct gauss_mix_3d_t *gauss_mix, struct gauss_mix_3d_
 	}
 	
 	/* done */
+}
+
+/*
+ * 
+ */
+void gauss_mix_rand_3d(struct gauss_mix_3d_t *gauss_mix)
+{
+	int i;
+	float sum = 0;
+	
+	for (i = 0; i < gauss_mix->mix_len; i++)
+	{
+		gauss_mix->weight[i] = rand();
+		sum += gauss_mix->weight[i];
+	}
+	
+	/* normalize to interval [0, 1] */
+	for (i = 0; i < gauss_mix->mix_len; i++)
+	{
+		gauss_mix->weight[i] /= sum;
+	}
+	
+	for (i = 0; i < gauss_mix->mix_len; i++)
+	{
+		gauss_rand_3d(&gauss_mix->single[i]);
+	}
+}
+
+/*
+ * 
+ */
+void gauss_mix_copy_3d(struct gauss_mix_3d_t *gauss_mix, struct gauss_mix_3d_t *gauss_mix_copy)
+{
+	int i;
+	
+	if (gauss_mix->mix_len != gauss_mix_copy->mix_len)
+	{
+		return;
+	}
+	
+	for (i = 0; i < gauss_mix->mix_len; i++)
+	{
+		gauss_mix_copy->weight[i] = gauss_mix->weight[i];
+		gauss_mix_copy->single[i] = gauss_mix->single[i];
+	}
 }
 
 /*

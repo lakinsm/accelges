@@ -37,26 +37,29 @@ typedef struct sample_3d_t {
 	float val[3];
 } sample_3d_t;
 
-/* allocate memory for each mixture */
-void gauss_mix_create_3d(struct gauss_mix_3d_t *gauss_mix, unsigned int mix_len);
-/* de-allocate memory for each mixture */
-void gauss_mix_delete_3d(struct gauss_mix_3d_t *gauss_mix);
-
 /* trivariate gaussian probability density function */
 float gauss_prob_den_3d(struct gauss_3d_t *gauss, struct sample_3d_t sample);
 /* trivariate gaussian discriminant function */
 float gauss_disc_3d(struct gauss_3d_t *gauss, struct sample_3d_t sample, float prior_prob);
-
+/* populate with random numbers */
+void gauss_rand_3d(struct gauss_3d_t *gauss);
 /* print trivariate gaussian parameters to standard output */
 void gauss_print_3d(struct gauss_3d_t *gauss);
 
+/* allocate memory for each mixture */
+void gauss_mix_create_3d(struct gauss_mix_3d_t *gauss_mix, unsigned int mix_len);
+/* de-allocate memory for each mixture */
+void gauss_mix_delete_3d(struct gauss_mix_3d_t *gauss_mix);
 /* trivariate gaussian mixture probability density function */
 float gauss_mix_prob_den_3d(struct gauss_mix_3d_t *gauss_mix, struct sample_3d_t sample);
 /* trivariate gaussian mixture discriminant function */
 float gauss_mix_disc_3d(struct gauss_mix_3d_t *gauss_mix, struct sample_3d_t sample, float prior_prob);
 /* trivariate gaussian mixture density estimation */
 void gauss_mix_den_est_3d(struct gauss_mix_3d_t *gauss_mix, struct gauss_mix_3d_t *gauss_mix_est, struct sample_3d_t sample[], unsigned int sample_len);
-
+/* populate with random numbers */
+void gauss_mix_rand_3d(struct gauss_mix_3d_t *gauss_mix);
+/* */
+void gauss_mix_copy_3d(struct gauss_mix_3d_t *gauss_mix, struct gauss_mix_3d_t *gauss_mix_copy);
 /* print trivariate gaussian mixture parameters to standard output */
 void gauss_mix_print_3d(struct gauss_mix_3d_t *gauss_mix);
 

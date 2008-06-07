@@ -35,6 +35,11 @@ static unsigned char parse_line(struct config_t *config, char *line);
 /* recognize frames */
 static void recognize(struct ges_3d_t *ges, struct accel_3d_t accel[], unsigned int accel_len);
 
+void ges_loop_seq_3d(struct seq_3d_t *seq, struct accel_3d_t accel)
+{
+	
+}
+
 /*
  * process accelerometer values
  */
