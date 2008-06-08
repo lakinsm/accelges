@@ -19,7 +19,6 @@
  */
 
 #include <getopt.h>
-#include <math.h>
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -50,9 +49,7 @@ static void print_usage(char *file_name);
 /* print current version */
 static void print_version(void);
 /* parse options given at command line */
-static char parse_cmd(int argc, char **argv);
-/* */
-void class_handle_accel(unsigned char pressed, struct accel_3d_t accel);
+static char parse_options(int argc, char **argv);
 /* catches the termination signal and closes the Wii */
 static void class_handle_signal(int signal);
 
@@ -66,67 +63,29 @@ void class_handle_accel(unsigned char pressed, struct accel_3d_t accel)
 	
 	if ((pressed) && (is_pressed))
 	{
-		seq.index = (seq.index + 1) % FRAME_LEN;
 		seq.each[seq.index] = accel;
+		seq.index = seq.index + 1;
 	}
 	else if ((!pressed) && (is_pressed))
 	{
-		is_pressed = 0;
-		
-		struct sample_3d_t accels[seq.index];
-		//memcpy(accels, seq.each, sizeof(accels));
-		
+		unsigned int feature_len = seq.index - 2;
+		struct sample_3d_t feature[feature_len];
 		int i;
-		for (i = 1; i < seq.index; i++)
+		
+		for (i = 1; i < seq.index - 1; i++)
 		{
-			sample_3d_t feature;
-	/* magnitude at time t (current time) */
-	feature.val[0] = sqrt(
-		pow(seq.each[i].val[0], 2) +
-		pow(seq.each[i].val[1], 2) +
-		pow(seq.each[i].val[2], 2));
-	/* OPTIMIZE: computes magnitudes twice at t and t + 1*/
-	/* magnitude at time t-1 */
-	feature.val[1] = sqrt(
-		pow(seq.each[i - 1].val[0], 2) +
-		pow(seq.each[i - 1].val[1], 2) +
-		pow(seq.each[i - 1].val[2], 2));
-	/* delta magnitude between time t and t - 1 */
-	feature.val[2] = sqrt(
-		pow(seq.each[i].val[0] - seq.each[i - 1].val[0], 2) +
-		pow(seq.each[i].val[1] - seq.each[i - 1].val[1], 2) +
-		pow(seq.each[i].val[2] - seq.each[i - 1].val[2], 2));	
-
-			accels[i] = feature;
+			ges_fea_3d(&seq, i, i-1, &feature[i - 1]);
+			//printf("%f\t%f\t%f\n", feature[i-1].val[0], feature[i-1].val[1], feature[i-1].val[2]);
 		}
 		
-		gauss_mix_den_est_3d(&gauss_mix, &gauss_mix_est, accels, seq.index);
+		gauss_mix_den_est_3d(&gauss_mix, &gauss_mix_est, feature, feature_len);
 		gauss_mix_print_3d(&gauss_mix_est);
+		//gauss_mix_print_3d(&gauss_mix);
 		/* copies gauss_mix_est to gauss_mix (need to re-arrange the params to be consistent */
-		gauss_mix_copy_3d(&gauss_mix_est, &gauss_mix);
+		gauss_mix_copy_3d(&gauss_mix, &gauss_mix_est);
+		
 		seq.index = 0;
-	}
-}
-
-/*
- * catches the termination signal and disposes the Wii
- */
-static void class_handle_signal(int signal)
-{
-	switch (signal)
-	{
-		case SIGINT:
-		case SIGTERM:
-			wii_set_leds(&wii, 1, 0, 0, 0);
-			wii_disconnect(&wii);
-			gauss_mix_write_3d(&gauss_mix, file_name);
-			printf("Disconnected.\n");
-			fflush(stdout);
-			fflush(stderr);
-			exit(0);
-			break;
-		default:
-			break;
+		is_pressed = 0;
 	}
 }
 
@@ -136,10 +95,11 @@ static void class_handle_signal(int signal)
 int main(int argc, char **argv)
 {
 	unsigned int mix_len;
+	
 	print_header();
 	
 	/* get the configuration file name */
-	switch (parse_cmd(argc, argv))
+	switch (parse_options(argc, argv))
 	{
 		case 'b': /* new-class */
 			printf("Class %s\n", file_name);
@@ -189,7 +149,7 @@ int main(int argc, char **argv)
 				fprintf(stderr, "Could not connect to the Wii.\n");
 				exit(1);
 			}
-			printf("Connected.\n");
+			printf("Connected. (Press and hold A then make gesture. Release when done.)\n");
 	
 			/* catch terminate signal to stop the read thread and close sockets */
 			signal(SIGINT, class_handle_signal);
@@ -239,8 +199,8 @@ static void print_usage(char *file_name)
 	
 	printf("Usage: %s [OPTIONS] | --version | --help \n", file_name);
 	printf("Options:\n");
-	printf("\tClass: --new-class <class> | --view-class <class> | --train-class <class>\n");
-	printf("\tModel: --new-model <model> | --view-model <model> | --train-model <model>\n");
+	printf("  Class: --new-class <class> | --view-class <class> | --train-class <class>\n");
+	printf("  Model: --new-model <model> | --view-model <model> | --train-model <model>\n");
 }
 
 /*
@@ -254,7 +214,7 @@ static void print_version(void)
 /*
  * parse options given at command line
  */
-static char parse_cmd(int argc, char **argv)
+static char parse_options(int argc, char **argv)
 {
 	int long_opt_ind = 0;
 	int long_opt_val = 0;
@@ -273,7 +233,7 @@ static char parse_cmd(int argc, char **argv)
 	
 	/* don't display errors to stderr */
 	opterr = 0;
-	while ((long_opt_val = getopt_long(argc, argv, "v1:2:p:q:c:m:h", long_opts, &long_opt_ind)) != -1) 
+	while ((long_opt_val = getopt_long(argc, argv, "vb:c:d:l:m:n:h", long_opts, &long_opt_ind)) != -1) 
 	{
 		switch (long_opt_val)
 		{
@@ -324,8 +284,34 @@ static char parse_cmd(int argc, char **argv)
 				
 				exit(0);
 				break;
+			default:
+				break;
 		}
 	}
 		
 	return 1;
+}
+
+/*
+ * catches the termination signal and disposes the Wii
+ */
+static void class_handle_signal(int signal)
+{
+	switch (signal)
+	{
+		case SIGINT:
+		case SIGTERM:
+			wii_set_leds(&wii, 1, 0, 0, 0);
+			wii_disconnect(&wii);
+			/* when finished with training the class, save it to file */
+			gauss_mix_write_3d(&gauss_mix, file_name);
+			
+			printf("Disconnected.\n");
+			fflush(stdout);
+			fflush(stderr);
+			exit(0);
+			break;
+		default:
+			break;
+	}
 }
