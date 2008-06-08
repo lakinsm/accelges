@@ -42,8 +42,13 @@ static void wii_req_cont_accel(struct wii_t *wii);
 /* 
  * initialize the Wii
  */
-void wii_init(struct wii_t * wii)
+void wii_init(struct wii_t *wii)
 {
+	if (!wii)
+	{
+		return;
+	}
+	
 	wii->in_sock = -1;
 	wii->out_sock = -1;
 	wii->is_calibrated = 0;
@@ -60,7 +65,12 @@ int wii_search(struct wii_t *wii, int timeout)
 	int dev_count;
 	int i;
 	int found = -1;
-	
+
+	if (!wii)
+	{
+		return -1;
+	}
+		
 	dev_id = hci_get_route(0);
 	if (dev_id < 0)
 	{
@@ -120,7 +130,9 @@ int wii_connect(struct wii_t *wii)
 	struct sockaddr_l2 addr;
 	
 	if (!wii)
+	{
 		return -1;
+	}
 		
 	addr.l2_family = AF_BLUETOOTH;
 	addr.l2_bdaddr = wii->bdaddr;
@@ -170,7 +182,9 @@ int wii_connect(struct wii_t *wii)
 void wii_disconnect(struct wii_t *wii)
 {
 	if (!wii)
+	{
 		return;
+	}
 	
 	close(wii->in_sock);
 	close(wii->out_sock);
@@ -185,13 +199,41 @@ void wii_set_leds(struct wii_t *wii, int led1, int led2, int led3, int led4)
 {
 	unsigned int report_len = 3;
 	unsigned char report[report_len];
-	
+
+	if (!wii)
+	{
+		return;
+	}
+		
 	report[0] = WII_SET_REPORT | WII_BT_OUTPUT;
-	report[1] = WM_CMD_LED;
+	report[1] = WII_CMD_LED;
 	report[2] = (led1 ? WII_LED_1 : WII_LED_NONE) | (led2 ? WII_LED_2 : WII_LED_NONE) |
 		(led3 ? WII_LED_3 : WII_LED_NONE) | (led4 ? WII_LED_4 : WII_LED_NONE);
 		
 	wii_write(wii, report, report_len);
+}
+
+/*
+ * request calibration and continuous acceleration reports
+ */
+void wii_talk(wii_t *wii)
+{	
+	if (!wii)
+	{
+		return;
+	}
+	
+	/* first, read the calibration */
+	printf("Requesting calibration... ");
+	wii_req_cal(wii);
+	wii_read(wii);
+	printf("done.\n");
+	
+	/* second, read the continuous acceleration */
+	printf("Reading accelerometer...\n");
+	wii_req_cont_accel(wii);
+	/* won't get out of the loop until the program is terminated */
+	wii_read(wii);
 }
 
 /*
@@ -203,7 +245,9 @@ static void wii_read(struct wii_t *wii)
 	unsigned char report[report_len];
 	
 	if (!wii)
+	{
 		return;
+	}
 	
 	while (1)
 	{
@@ -225,9 +269,9 @@ static void wii_read(struct wii_t *wii)
 				struct accel_3d_t accel;	
 				/* calibration data was read in a previous iteration and we can continue */
 				
-				accel.val[0] = ((float)(report[4] - wii->cal_zero.val_x)) / ((float)(wii->cal_one.val_x - wii->cal_zero.val_x));
-				accel.val[1] = ((float)(report[5] - wii->cal_zero.val_y)) / ((float)(wii->cal_one.val_y - wii->cal_zero.val_y));
-				accel.val[2] = ((float)(report[6] - wii->cal_zero.val_z)) / ((float)(wii->cal_one.val_z - wii->cal_zero.val_z));
+				accel.val[0] = ((float)(report[4] - wii->cal_zero.val[0])) / ((float)(wii->cal_one.val[0] - wii->cal_zero.val[0]));
+				accel.val[1] = ((float)(report[5] - wii->cal_zero.val[1])) / ((float)(wii->cal_one.val[1] - wii->cal_zero.val[1]));
+				accel.val[2] = ((float)(report[6] - wii->cal_zero.val[2])) / ((float)(wii->cal_one.val[2] - wii->cal_zero.val[2]));
 				
 				/* make callback to the function that handles accelertion */
 				wii->handle_accel(pressed, accel);
@@ -235,13 +279,13 @@ static void wii_read(struct wii_t *wii)
 				break;
 			case WII_RPT_READ:
 				/* read calibration data */
-				wii->cal_zero.val_x = report[7];
-				wii->cal_zero.val_y = report[8];
-				wii->cal_zero.val_z = report[9];
+				wii->cal_zero.val[0] = report[7];
+				wii->cal_zero.val[1] = report[8];
+				wii->cal_zero.val[2] = report[9];
 				
-				wii->cal_one.val_x = report[11];
-				wii->cal_one.val_y = report[12];
-				wii->cal_one.val_z = report[13];
+				wii->cal_one.val[0] = report[11];
+				wii->cal_one.val[1] = report[12];
+				wii->cal_one.val[2] = report[13];
 				
 				/* we've read the calibration and we're done here */
 				wii->is_calibrated = 1;
@@ -256,34 +300,15 @@ static void wii_read(struct wii_t *wii)
 	return;
 }
 
-/*
- * request calibration and continuous acceleration reports
- */
-void wii_talk(wii_t *wii)
-{	
-	if (!wii)
-		return;
-	
-	/* first, read the calibration */
-	printf("Requesting calibration... ");
-	wii_req_cal(wii);
-	wii_read(wii);
-	printf("done.\n");
-	
-	/* second, read the continuous acceleration */
-	printf("Reading accelerometer...\n");
-	wii_req_cont_accel(wii);
-	/* won't get out of the loop until the program is terminated */
-	wii_read(wii);
-}
-
 /* 
  * write a report to the Wii 
  */
 static int wii_write(struct wii_t *wii, unsigned char *report, unsigned int report_len)
 {
 	if (!wii)
+	{
 		return -1;
+	}
 		
 	return write(wii->out_sock, report, report_len);	
 }
@@ -297,10 +322,12 @@ static void wii_req_cal(struct wii_t *wii)
 	unsigned char report[report_len];
 	
 	if (!wii)
+	{
 		return;
+	}
 	
 	report[0] = WII_SET_REPORT | WII_BT_OUTPUT;
-	report[1] = WM_CMD_READ_DATA;
+	report[1] = WII_CMD_READ_DATA;
 	*(int *)(report + 2) = htonl(WII_MEM_OFFSET_CAL);
 	*(short *)(report + 6) = htons(7);
 	
@@ -316,10 +343,12 @@ static void wii_req_cont_accel(struct wii_t *wii)
 	unsigned char report[report_len];
 	
 	if (!wii)
+	{
 		return;
+	}
 	
 	report[0] = WII_SET_REPORT | WII_BT_OUTPUT;
-	report[1] = WM_CMD_REPORT_TYPE;
+	report[1] = WII_CMD_REPORT_TYPE;
 	report[2] = WII_CONTINUOUS_ON;
 	report[3] = WII_RPT_BTN_ACC;
 	
