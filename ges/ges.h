@@ -53,10 +53,7 @@ typedef struct seq_3d_t {
 
 /* gesture type */
 typedef struct ges_3d_t {
-	struct accel_3d_t frame[FRAME_LEN];
-	unsigned int index;
-	unsigned int begin;
-	unsigned int end;
+	struct seq_3d_t seq;
 	unsigned char detected;
 	struct class_2c_t endpoint;
 } ges_t;
@@ -75,7 +72,7 @@ void ges_write_3d(struct ges_3d_t *ges, struct config_t *config);
 unsigned char ges_load_config(struct config_t *config, char *file_name);
 /* process accelerometer values */
 void ges_process_3d(struct ges_3d_t *ges, struct accel_3d_t accel);
-
-void ges_loop_seq_3d(struct seq_3d_t *seq, struct accel_3d_t accel);
+/* create feature vector */
+unsigned char ges_fea_3d(struct seq_3d_t *seq, unsigned int seq_index, unsigned int seq_prev_index, struct sample_3d_t *sample);
 
 #endif /*GES_H_*/

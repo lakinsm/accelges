@@ -35,9 +35,44 @@ static unsigned char parse_line(struct config_t *config, char *line);
 /* recognize frames */
 static void recognize(struct ges_3d_t *ges, struct accel_3d_t accel[], unsigned int accel_len);
 
-void ges_loop_seq_3d(struct seq_3d_t *seq, struct accel_3d_t accel)
+/*
+ * create feature vector
+ */
+unsigned char ges_fea_3d(struct seq_3d_t *seq, unsigned int seq_index, unsigned int seq_prev_index, struct sample_3d_t *sample)
 {
+	if ((!seq) || (!sample))
+	{
+		return 0;
+	}
 	
+	if (seq_index > 0)
+	{		
+		/* magnitude at time indicated by index */
+		sample->val[0] = sqrt(
+			pow(seq->each[seq_index].val[0], 2) +
+			pow(seq->each[seq_index].val[1], 2) +
+			pow(seq->each[seq_index].val[2], 2));
+		/* magnitude at time indicated by prev_index */
+		sample->val[1] = sqrt(
+			pow(seq->each[seq_prev_index].val[0], 2) +
+			pow(seq->each[seq_prev_index].val[1], 2) +
+			pow(seq->each[seq_prev_index].val[2], 2));
+		/* delta magnitude between time t and t - 1 */
+		sample->val[2] = sqrt(
+			pow(seq->each[seq_index].val[0] - seq->each[seq_prev_index].val[0], 2) +
+			pow(seq->each[seq_index].val[1] - seq->each[seq_prev_index].val[1], 2) +
+			pow(seq->each[seq_index].val[2] - seq->each[seq_prev_index].val[2], 2));		
+		
+		return 1;
+	}
+	else
+	{
+		sample->val[0] = 0.0;
+		sample->val[1] = 0.0;
+		sample->val[2] = 0.0;
+		
+		return 0;
+	}
 }
 
 /*
@@ -46,29 +81,14 @@ void ges_loop_seq_3d(struct seq_3d_t *seq, struct accel_3d_t accel)
 void ges_process_3d(struct ges_3d_t *ges, struct accel_3d_t accel)
 {
 	/* increment and save current frame (uses a circular list) */
-	unsigned int prev_index = ges->index;
-	ges->index = (ges->index + 1) % FRAME_LEN;
-	ges->frame[ges->index] = accel;
+	unsigned int prev_index = ges->seq.index;
+	ges->seq.index = (ges->seq.index + 1) % FRAME_LEN;
+	ges->seq.each[ges->seq.index] = accel;
 	
 	/* extract feature vector */
 	sample_3d_t feature;
-	/* magnitude at time t (current time) */
-	feature.val[0] = sqrt(
-		pow(ges->frame[ges->index].val[0], 2) +
-		pow(ges->frame[ges->index].val[1], 2) +
-		pow(ges->frame[ges->index].val[2], 2));
-	/* OPTIMIZE: computes magnitudes twice at t and t + 1*/
-	/* magnitude at time t-1 */
-	feature.val[1] = sqrt(
-		pow(ges->frame[prev_index].val[0], 2) +
-		pow(ges->frame[prev_index].val[1], 2) +
-		pow(ges->frame[prev_index].val[2], 2));
-	/* delta magnitude between time t and t - 1 */
-	feature.val[2] = sqrt(
-		pow(ges->frame[ges->index].val[0] - ges->frame[prev_index].val[0], 2) +
-		pow(ges->frame[ges->index].val[1] - ges->frame[prev_index].val[1], 2) +
-		pow(ges->frame[ges->index].val[2] - ges->frame[prev_index].val[2], 2));	
-
+	ges_fea_3d(&ges->seq, ges->seq.index, prev_index, &feature);
+	
 	//printf("%f\t%f\t%f\n", feature.val[0], feature.val[1], feature.val[2]);
 	
 	/* motion has index 1 and noise has index 0 */
@@ -77,7 +97,7 @@ void ges_process_3d(struct ges_3d_t *ges, struct accel_3d_t accel)
 		/* we want motion */
 		if (!ges->detected)
 		{
-			ges->begin = ges->index;
+			ges->seq.begin = ges->seq.index;
 			ges->detected = 1;
 		}
 	}
@@ -86,29 +106,29 @@ void ges_process_3d(struct ges_3d_t *ges, struct accel_3d_t accel)
 		/* noise detected */
 		if (ges->detected)
 		{
-			ges->end = ges->index;
+			ges->seq.end = ges->seq.index;
 			ges->detected = 0;
 			/* case when begin < end */
-			if (ges->begin < ges->end)
+			if (ges->seq.begin < ges->seq.end)
 			{
-				if (ges->end - ges->begin > FRAME_DIF)
+				if (ges->seq.end - ges->seq.begin > FRAME_DIF)
 				{
-					unsigned int frame_len = ges->end - ges->begin + 1;
+					unsigned int frame_len = ges->seq.end - ges->seq.begin + 1;
 					struct accel_3d_t accels[frame_len];
-					memcpy(accels, &ges->frame[ges->begin], frame_len * sizeof(sample_3d_t));
+					memcpy(accels, &ges->seq.each[ges->seq.begin], frame_len * sizeof(sample_3d_t));
 					recognize(ges, accels, frame_len);
 				}
 			}
 			else /* case when begin > end */
 			{
-				if (FRAME_LEN - ges->begin + ges->end > FRAME_DIF)
+				if (FRAME_LEN - ges->seq.begin + ges->seq.end > FRAME_DIF)
 				{
-					unsigned int frame_len_end = FRAME_LEN - ges->begin;
-					unsigned int frame_len_begin = ges->end + 1;
+					unsigned int frame_len_end = FRAME_LEN - ges->seq.begin;
+					unsigned int frame_len_begin = ges->seq.end + 1;
 					unsigned int frame_len = frame_len_end + frame_len_begin;
 					struct accel_3d_t accels[frame_len];
-					memcpy(&accels[0], &ges->frame[ges->begin], frame_len_end * sizeof(sample_3d_t));
-					memcpy(&accels[frame_len_end], &ges->frame[0], frame_len_begin * sizeof(accel_3d_t));
+					memcpy(&accels[0], &ges->seq.each[ges->seq.begin], frame_len_end * sizeof(sample_3d_t));
+					memcpy(&accels[frame_len_end], &ges->seq.each[0], frame_len_begin * sizeof(accel_3d_t));
 					recognize(ges, accels, frame_len); 
 				}
 			}
@@ -121,14 +141,14 @@ void ges_process_3d(struct ges_3d_t *ges, struct accel_3d_t accel)
  */
 void ges_create_3d(struct ges_3d_t *ges)
 {
-	ges->index = 0;
+	ges->seq.index = 0;
 	ges->detected = 0;
 	/* do not create here, will be created during reading from files */
 	//gauss_mix_create_3d(&ges->endpoint.each[0], 1);
 	//gauss_mix_create_3d(&ges->endpoint.each[1], 1);
 	/* TO-DO: write these values to files */
-	ges->endpoint.prior_prob[0] = 0.3; /* noise */
-	ges->endpoint.prior_prob[1] = 0.7; /* motion */
+	ges->endpoint.prior_prob[0] = 0.4; /* noise */
+	ges->endpoint.prior_prob[1] = 0.6; /* motion */
 }
 
 /* 
@@ -208,7 +228,7 @@ unsigned char ges_load_config(struct config_t *config, char *file_name)
  */
 static void recognize(struct ges_3d_t *ges, struct accel_3d_t accel[], unsigned int accel_len)
 {
-	printf("Processing gesture...\n");
+	printf("Processing gesture... (TO-DO: gesture recognition)\n");
 	int i;
 	for (i = 0; i < accel_len; i++)
 		printf("%f %f %f\n", accel[i].val[0], accel[i].val[1], accel[i].val[2]);
@@ -300,35 +320,35 @@ void ges_populate_3d(struct ges_3d_t *ges)
 {	
 	/* noise */
 	gauss_mix_create_3d(&ges->endpoint.each[0], 1);
-	ges->endpoint.prior_prob[0] = 0.3;
+	ges->endpoint.prior_prob[0] = 0.4;
 	ges->endpoint.each[0].weight[0] = 1;
-	ges->endpoint.each[0].single[0].mean[0] = 1.0;
-	ges->endpoint.each[0].single[0].mean[1] = 1.0;
-	ges->endpoint.each[0].single[0].mean[2] = 0.0;
-	ges->endpoint.each[0].single[0].covar[0][0] = 0.07;
-	ges->endpoint.each[0].single[0].covar[0][1] = 0.0;
-	ges->endpoint.each[0].single[0].covar[0][2] = 0.0;
-	ges->endpoint.each[0].single[0].covar[1][0] = 0.0;
-	ges->endpoint.each[0].single[0].covar[1][1] = 0.07;
-	ges->endpoint.each[0].single[0].covar[1][2] = 0.0;
-	ges->endpoint.each[0].single[0].covar[2][0] = 0.0;
-	ges->endpoint.each[0].single[0].covar[2][1] = 0.0;
-	ges->endpoint.each[0].single[0].covar[2][2] = 0.07;
+	ges->endpoint.each[0].each[0].mean[0] = 1.0;
+	ges->endpoint.each[0].each[0].mean[1] = 1.0;
+	ges->endpoint.each[0].each[0].mean[2] = 0.0;
+	ges->endpoint.each[0].each[0].covar[0][0] = 0.07;
+	ges->endpoint.each[0].each[0].covar[0][1] = 0.0;
+	ges->endpoint.each[0].each[0].covar[0][2] = 0.0;
+	ges->endpoint.each[0].each[0].covar[1][0] = 0.0;
+	ges->endpoint.each[0].each[0].covar[1][1] = 0.07;
+	ges->endpoint.each[0].each[0].covar[1][2] = 0.0;
+	ges->endpoint.each[0].each[0].covar[2][0] = 0.0;
+	ges->endpoint.each[0].each[0].covar[2][1] = 0.0;
+	ges->endpoint.each[0].each[0].covar[2][2] = 0.07;
 	
 	/* motion */
 	gauss_mix_create_3d(&ges->endpoint.each[1], 1);
-	ges->endpoint.prior_prob[1] = 0.7;
+	ges->endpoint.prior_prob[1] = 0.6;
 	ges->endpoint.each[1].weight[0] = 1;
-	ges->endpoint.each[1].single[0].mean[0] = 2.4;
-	ges->endpoint.each[1].single[0].mean[1] = 2.0;
-	ges->endpoint.each[1].single[0].mean[2] = 0.7;
-	ges->endpoint.each[1].single[0].covar[0][0] = 0.4;
-	ges->endpoint.each[1].single[0].covar[0][1] = 0.0;
-	ges->endpoint.each[1].single[0].covar[0][2] = 0.0;
-	ges->endpoint.each[1].single[0].covar[1][0] = 0.0;
-	ges->endpoint.each[1].single[0].covar[1][1] = 0.4;
-	ges->endpoint.each[1].single[0].covar[1][2] = 0.0;
-	ges->endpoint.each[1].single[0].covar[2][0] = 0.0;
-	ges->endpoint.each[1].single[0].covar[2][1] = 0.0;
-	ges->endpoint.each[1].single[0].covar[2][2] = 0.4;
+	ges->endpoint.each[1].each[0].mean[0] = 2.4;
+	ges->endpoint.each[1].each[0].mean[1] = 2.0;
+	ges->endpoint.each[1].each[0].mean[2] = 0.7;
+	ges->endpoint.each[1].each[0].covar[0][0] = 0.4;
+	ges->endpoint.each[1].each[0].covar[0][1] = 0.0;
+	ges->endpoint.each[1].each[0].covar[0][2] = 0.0;
+	ges->endpoint.each[1].each[0].covar[1][0] = 0.0;
+	ges->endpoint.each[1].each[0].covar[1][1] = 0.4;
+	ges->endpoint.each[1].each[0].covar[1][2] = 0.0;
+	ges->endpoint.each[1].each[0].covar[2][0] = 0.0;
+	ges->endpoint.each[1].each[0].covar[2][1] = 0.0;
+	ges->endpoint.each[1].each[0].covar[2][2] = 0.4;
 }

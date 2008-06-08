@@ -22,17 +22,20 @@
 #ifndef GAUSS_H_
 #define GAUSS_H_
 
+/* trivariate gaussian mixture */
 typedef struct gauss_mix_3d_t {
 	unsigned int mix_len; /* number of mixtures */
 	float *weight; /* weight coefficients */
-	struct gauss_3d_t *single;
+	struct gauss_3d_t *each;
 } gauss_mix_3d_t;
 
+/* trivariate gaussian distribution */
 typedef struct gauss_3d_t {
 	float mean[3]; /* mean vector */
 	float covar[3][3]; /* covariance matrix */
 } gauss_3d_t;
 
+/* sample vector */
 typedef struct sample_3d_t {
 	float val[3];
 } sample_3d_t;
@@ -56,13 +59,12 @@ float gauss_mix_prob_den_3d(struct gauss_mix_3d_t *gauss_mix, struct sample_3d_t
 float gauss_mix_disc_3d(struct gauss_mix_3d_t *gauss_mix, struct sample_3d_t sample, float prior_prob);
 /* trivariate gaussian mixture density estimation */
 void gauss_mix_den_est_3d(struct gauss_mix_3d_t *gauss_mix, struct gauss_mix_3d_t *gauss_mix_est, struct sample_3d_t sample[], unsigned int sample_len);
-/* populate with random numbers */
+/* populate the trivariate gaussian mixture with random numbers */
 void gauss_mix_rand_3d(struct gauss_mix_3d_t *gauss_mix);
-/* */
-void gauss_mix_copy_3d(struct gauss_mix_3d_t *gauss_mix, struct gauss_mix_3d_t *gauss_mix_copy);
+/* copy the source trivariate gaussian mixture to the destination */
+void gauss_mix_copy_3d(struct gauss_mix_3d_t *gauss_mix_dest, struct gauss_mix_3d_t *gauss_mix_src);
 /* print trivariate gaussian mixture parameters to standard output */
 void gauss_mix_print_3d(struct gauss_mix_3d_t *gauss_mix);
-
 /* write trivariate gaussian mixture to file */
 int gauss_mix_write_3d(struct gauss_mix_3d_t *gauss_mix, char *file_name);
 /* read trivariate gaussian mixture from file */

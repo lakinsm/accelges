@@ -22,10 +22,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <time.h>
 
 #include "gauss.h"
 
-#define MAX_ACCEL_VAL 4
+#define MAX_ACCEL_VAL 4.0
 
 /* matrix determinant of size 3x3 */
 static float mat_det_3d(float mat[3][3]);
@@ -39,7 +40,7 @@ void gauss_mix_create_3d(struct gauss_mix_3d_t *gauss_mix, unsigned int mix_len)
 {
 	gauss_mix->mix_len = mix_len;
 	gauss_mix->weight = (float *)malloc(mix_len * sizeof(float));
-	gauss_mix->single = (struct gauss_3d_t *)malloc(mix_len * sizeof(struct gauss_3d_t));
+	gauss_mix->each = (struct gauss_3d_t *)malloc(mix_len * sizeof(struct gauss_3d_t));
 }
 
 /*
@@ -49,7 +50,7 @@ void gauss_mix_delete_3d(struct gauss_mix_3d_t *gauss_mix)
 {
 	gauss_mix->mix_len = 0;
 	free(gauss_mix->weight);
-	free(gauss_mix->single);
+	free(gauss_mix->each);
 }
 
 /*
@@ -59,6 +60,13 @@ void gauss_mix_delete_3d(struct gauss_mix_3d_t *gauss_mix)
 float gauss_prob_den_3d(struct gauss_3d_t *gauss, struct sample_3d_t sample)
 {
 	float mat_det = mat_det_3d(gauss->covar);
+	//printf("mat_det: %f\n", mat_det);
+	/* still have to enforce mat_det to not be 0.0*/
+	if (mat_det == 0)
+	{
+		return 1; /* not ok */	
+	}
+	
 	float mat_inv[3][3];
 	mat_inv_3d(gauss->covar, mat_inv);
 	
@@ -73,7 +81,10 @@ float gauss_prob_den_3d(struct gauss_3d_t *gauss, struct sample_3d_t sample)
 		(accel1[0] * mat_inv[0][1] + accel1[1] * mat_inv[1][1] + accel1[2] * mat_inv[2][1]) * accel1[1] +
 		(accel1[0] * mat_inv[0][2] + accel1[1] * mat_inv[1][2] + accel1[2] * mat_inv[2][2]) * accel1[2];
 	
-	float pdf = powf(M_E, mahalanobis_dis / - 2.0) / (powf(2 * M_PI, 1.5) * sqrtf(mat_det));
+	/* determinant was less than zero and sqrtf(-something) is nan */
+	//float pdf = powf(M_E, mahalanobis_dis / - 2.0) / (powf(2 * M_PI, 1.5) * sqrtf(mat_det));
+	/* changed sqrtf(mat_det)) with powf(mat_det, 0.5)) */
+	float pdf = powf(M_E, mahalanobis_dis / - 2.0) / (powf(2 * M_PI, 1.5) * powf(mat_det, 0.5));
 	 
 	return pdf;
 }
@@ -88,22 +99,31 @@ float gauss_disc_3d(struct gauss_3d_t *gauss, struct sample_3d_t sample, float p
 }
 
 /*
- * 
+ * generate random values for the gaussian distribution 
  */
 void gauss_rand_3d(struct gauss_3d_t *gauss)
 {
 	int i, j;
 	
+	srand((unsigned)(time(0))); 
+	
 	for (i = 0; i < 3; i++)
 	{
-		gauss->mean[i] = rand() % MAX_ACCEL_VAL;
+		gauss->mean[i] = MAX_ACCEL_VAL * rand() / ((float)(RAND_MAX) + 1.0);
 	}
 	
 	for (i = 0; i < 3; i++)
 	{
 		for (j = 0; j < 3; j++)
 		{
-			gauss->covar[i][j] = rand() % MAX_ACCEL_VAL;
+			if (i == j)
+			{
+				gauss->covar[i][j] = MAX_ACCEL_VAL * rand() / ((float)(RAND_MAX) + 1.0);
+			}
+			else
+			{
+				gauss->covar[i][j] = 0.0;
+			}
 		}
 	}
 }
@@ -137,11 +157,14 @@ void gauss_print_3d(struct gauss_3d_t *gauss)
  */
 float gauss_mix_prob_den_3d(struct gauss_mix_3d_t *gauss_mix, struct sample_3d_t sample)
 {
-	float pdf = 0;
+	float pdf = 0.0;
 	int i;
 	
 	for (i = 0; i < gauss_mix->mix_len; i++)
-		pdf += gauss_mix->weight[i] * gauss_prob_den_3d(&gauss_mix->single[i], sample);
+	{
+		pdf += gauss_mix->weight[i] * gauss_prob_den_3d(&gauss_mix->each[i], sample);
+		//printf("w: %f g: %f pdf: %f\n", gauss_mix->weight[i], gauss_prob_den_3d(&gauss_mix->each[i], sample), pdf);
+	}
 		
 	return pdf; 	
 }
@@ -173,8 +196,13 @@ void gauss_mix_den_est_3d(struct gauss_mix_3d_t *gauss_mix, struct gauss_mix_3d_
 	{
 		for (i = 0; i < sample_len; i++)
 		{
-			quan_2d[k][i] = gauss_mix->weight[k] * gauss_prob_den_3d(&gauss_mix->single[k], sample[i]) / gauss_mix_prob_den_3d(gauss_mix, sample[i]);
+			//printf("%f\t", gauss_mix->weight[k]);
+			//printf("%f\n", gauss_prob_den_3d(&gauss_mix->each[k], sample[i])); 
+			//printf("%f\n", gauss_mix_prob_den_3d(gauss_mix, sample[i]));
+			quan_2d[k][i] = gauss_mix->weight[k] * gauss_prob_den_3d(&gauss_mix->each[k], sample[i]) / gauss_mix_prob_den_3d(gauss_mix, sample[i]);
+			//printf("%f\t", quan_2d[k][i]);
 		}
+		//printf("\n");
 	}
 			
 	/* 4.104. */
@@ -210,7 +238,7 @@ void gauss_mix_den_est_3d(struct gauss_mix_3d_t *gauss_mix, struct gauss_mix_3d_
 			{
 				sum += quan_2d[k][i] * sample[i].val[p];
 			}
-			gauss_mix_est->single[k].mean[p] = sum / quan_1d[k];
+			gauss_mix_est->each[k].mean[p] = sum / quan_1d[k];
 		}
 	}
 	
@@ -224,10 +252,10 @@ void gauss_mix_den_est_3d(struct gauss_mix_3d_t *gauss_mix, struct gauss_mix_3d_
 				float sum = 0.0;
 				for (i = 0; i < sample_len; i++)
 				{
-					sum += quan_2d[k][i] * (sample[i].val[p] - gauss_mix->single[k].mean[p]) *
-						(sample[i].val[q] - gauss_mix->single[k].mean[q]); 
+					sum += quan_2d[k][i] * (sample[i].val[p] - gauss_mix->each[k].mean[p]) *
+						(sample[i].val[q] - gauss_mix->each[k].mean[q]); 
 				}
-				gauss_mix_est->single[k].covar[p][q] = sum / quan_1d[k];
+				gauss_mix_est->each[k].covar[p][q] = sum / quan_1d[k];
 			}
 		}
 	}
@@ -243,9 +271,11 @@ void gauss_mix_rand_3d(struct gauss_mix_3d_t *gauss_mix)
 	int i;
 	float sum = 0;
 	
+	srand((unsigned)(time(0))); 
+	
 	for (i = 0; i < gauss_mix->mix_len; i++)
 	{
-		gauss_mix->weight[i] = rand();
+		gauss_mix->weight[i] = rand() / ((float)(RAND_MAX) + 1.0);
 		sum += gauss_mix->weight[i];
 	}
 	
@@ -257,26 +287,26 @@ void gauss_mix_rand_3d(struct gauss_mix_3d_t *gauss_mix)
 	
 	for (i = 0; i < gauss_mix->mix_len; i++)
 	{
-		gauss_rand_3d(&gauss_mix->single[i]);
+		gauss_rand_3d(&gauss_mix->each[i]);
 	}
 }
 
 /*
  * 
  */
-void gauss_mix_copy_3d(struct gauss_mix_3d_t *gauss_mix, struct gauss_mix_3d_t *gauss_mix_copy)
+void gauss_mix_copy_3d(struct gauss_mix_3d_t *gauss_mix_dest, struct gauss_mix_3d_t *gauss_mix_src)
 {
 	int i;
 	
-	if (gauss_mix->mix_len != gauss_mix_copy->mix_len)
+	if (gauss_mix_dest->mix_len != gauss_mix_src->mix_len)
 	{
 		return;
 	}
 	
-	for (i = 0; i < gauss_mix->mix_len; i++)
+	for (i = 0; i < gauss_mix_src->mix_len; i++)
 	{
-		gauss_mix_copy->weight[i] = gauss_mix->weight[i];
-		gauss_mix_copy->single[i] = gauss_mix->single[i];
+		gauss_mix_dest->weight[i] = gauss_mix_src->weight[i];
+		gauss_mix_dest->each[i] = gauss_mix_src->each[i];
 	}
 }
 
@@ -297,7 +327,7 @@ void gauss_mix_print_3d(struct gauss_mix_3d_t *gauss_mix)
 	for (k = 0; k < mix_len; k++)
 	{
 		printf("For gaussian mixture %d:\n", k);
-		gauss_print_3d(&gauss_mix->single[k]);
+		gauss_print_3d(&gauss_mix->each[k]);
 		printf("\n");
 	}
 }
@@ -318,7 +348,7 @@ int gauss_mix_write_3d(struct gauss_mix_3d_t *gauss_mix, char *file_name)
 	
 	fwrite(&gauss_mix->mix_len, sizeof(unsigned int), 1, file);
 	fwrite(gauss_mix->weight, sizeof(float), mix_len, file);
-	fwrite(gauss_mix->single, sizeof(struct gauss_3d_t), mix_len, file);
+	fwrite(gauss_mix->each, sizeof(struct gauss_3d_t), mix_len, file);
 	
 	fclose(file);
 	
@@ -343,7 +373,7 @@ int gauss_mix_read_3d(struct gauss_mix_3d_t *gauss_mix, char *file_name)
 	mix_len = gauss_mix->mix_len;
 	gauss_mix_create_3d(gauss_mix, mix_len); /* create arrays */
 	fread(gauss_mix->weight, sizeof(float), mix_len, file);
-	fread(gauss_mix->single, sizeof(struct gauss_3d_t), mix_len, file);
+	fread(gauss_mix->each, sizeof(struct gauss_3d_t), mix_len, file);
 	
 	fclose(file);
 	
