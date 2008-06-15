@@ -5,7 +5,7 @@ noise	noise.gauss
 motion	motion.gauss
 
 #hmm gestures (as many as you like)
-hmm	next	right.hmm
-hmm	prev	left.hmm
-hmm	setVolumeRelative 50	up.hmm
-hmm	mute	forward.hmm
+#hmm	next	right.hmm
+#hmm	prev	left.hmm
+#hmm	setVolumeRelative 50	up.hmm
+#hmm	mute	forward.hmm
