@@ -4,6 +4,8 @@
 noise	noise.gauss
 motion	motion.gauss
 
-#hmm gestures
-hmm	answer-call	ac.hmm
-hmm	hang-up-call	huc.hmm
+#hmm gestures (as many as you like)
+hmm	next	right.hmm
+hmm	prev	left.hmm
+hmm	setVolumeRelative 50	up.hmm
+hmm	mute	forward.hmm

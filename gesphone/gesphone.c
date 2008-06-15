@@ -52,6 +52,26 @@ void handle_accel(unsigned char pressed, struct accel_3d_t accel)
 {
 	/* further call the recognizer */
 	ges_process_3d(&ges, accel);
+	if (pressed)
+	{
+		printf("%+f\t%+f\t%+f\n", accel.val[0], accel.val[1], accel.val[2]);
+	}
+}
+
+/*
+ * function called by the recognizer once the recognition is done 
+ */
+void handle_reco(char *reco)
+{
+	char cmd[1024];
+	cmd[0] = '\0';
+	strcat(cmd, "dcop amarok player ");
+	/* reco is specified in the call/call.ges file */
+	/* reco might be play, pause, next, prev, or etc. */
+	strcat(cmd, reco);
+	printf("Executing command: %s\n", cmd);
+	system(cmd); // or execl ???
+	printf("Returned after executing command.\n"); 
 }
 
 /*
@@ -74,7 +94,8 @@ int main(int argc, char **argv)
 	printf("Configuration loaded.\n");
 	ges_create_3d(&ges);
 	ges_read_3d(&ges, &config);
-	
+	/* assign callbacks for recognition and acceleration */
+	ges.handle_reco = handle_reco;
 	wii.handle_accel = handle_accel;
 	
 	printf("Searching... (Press 1 and 2 on the Wii)\n");
