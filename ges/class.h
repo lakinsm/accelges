@@ -25,7 +25,7 @@
 #include "gauss.h"
 
 typedef struct class_2c_t {
-	float prior_prob[2];
+	double prior_prob[2];
 	struct gauss_mix_3d_t each[2];
 } class_2c_t;
 

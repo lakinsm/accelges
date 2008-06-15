@@ -34,8 +34,8 @@ unsigned int class_max_2c(struct class_2c_t *class, struct sample_3d_t sample)
 	//	fprintf(stderr, "Null arguments inside %s at line %d.\n", __FILE__, __LINE__);
 	//}
 	
- 	float prob_0c = gauss_mix_disc_3d(&class->each[0], sample, class->prior_prob[0]);
-	float prob_1c = gauss_mix_disc_3d(&class->each[1], sample, class->prior_prob[1]);
+ 	double prob_0c = gauss_mix_disc_3d(&class->each[0], sample, class->prior_prob[0]);
+	double prob_1c = gauss_mix_disc_3d(&class->each[1], sample, class->prior_prob[1]);
 	
 	if (prob_0c > prob_1c)
 	{

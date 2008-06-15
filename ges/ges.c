@@ -111,7 +111,7 @@ void ges_process_3d(struct ges_3d_t *ges, struct accel_3d_t accel)
 		{
 			ges->seq.end = ges->seq.index;
 			ges->detected = 0;
-			//printf("detected with size: %d\n", ges->seq.end - ges->seq.begin); 
+			printf("detected with size: %d\n", ges->seq.end - ges->seq.begin); 
 			/* case when begin < end */
 			if (ges->seq.begin < ges->seq.end)
 			{
@@ -192,9 +192,9 @@ void ges_delete_3d(struct ges_3d_t *ges)
 void ges_read_3d(struct ges_3d_t *ges, struct config_t *config)
 {
 	gauss_mix_read_3d(&ges->endpoint.each[0], config->noise_file_name);	
-	//gauss_mix_print_3d(&ges->endpoint.each[0]);
+	gauss_mix_print_3d(&ges->endpoint.each[0]);
 	gauss_mix_read_3d(&ges->endpoint.each[1], config->motion_file_name);
-	//gauss_mix_print_3d(&ges->endpoint.each[1]);
+	gauss_mix_print_3d(&ges->endpoint.each[1]);
 	
 	ges->model_len = config->model_len;
 	int i;
@@ -266,6 +266,8 @@ unsigned char ges_load_config(struct config_t *config, char *file_name)
  */
 static void recognize(struct ges_3d_t *ges, struct accel_3d_t accel[], unsigned int accel_len)
 {
+	if (ges->model_len == 0)
+		return;
 	//printf("Processing gesture... (TO-DO: gesture recognition)\n");
 	int i;
 	/*
@@ -276,7 +278,7 @@ static void recognize(struct ges_3d_t *ges, struct accel_3d_t accel[], unsigned 
 	// */
 	//float vals[ges->model_len];
 	unsigned char max_reached_final_state = 0;
-	float max = hmm_viterbi(&ges->model[0], accel, accel_len, &max_reached_final_state);
+	double max = hmm_viterbi(&ges->model[0], accel, accel_len, &max_reached_final_state);
 	//float max = hmm_forward(&ges->model[0], accel, accel_len);
 	//float prev_max = max;
 	
@@ -286,7 +288,7 @@ static void recognize(struct ges_3d_t *ges, struct accel_3d_t accel[], unsigned 
 	{
 		//float possib_max = hmm_forward(&ges->model[i], accel, accel_len);
 		unsigned char possib_max_reached_final_state = 0; 
-		float possib_max = hmm_viterbi(&ges->model[i], accel, accel_len, &possib_max_reached_final_state);
+		double possib_max = hmm_viterbi(&ges->model[i], accel, accel_len, &possib_max_reached_final_state);
 
 		//vals[i] = possib_max;
 		if (!max_reached_final_state)

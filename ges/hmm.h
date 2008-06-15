@@ -26,28 +26,28 @@
 
 typedef struct hmm_3d_t {
 	unsigned int state_len;
-	float **trans_prob; /* state transition probability matrix */
-	float *initial_prob; /* initial state probability vector */
+	double **trans_prob; /* state transition probability matrix */
+	double *initial_prob; /* initial state probability vector */
 	gauss_mix_3d_t *output_prob; /* output probability vector */
 	unsigned int initial_state;
 	unsigned int final_state;	
 } hmm_3d_t;
 
 /* */
-float hmm_b(struct gauss_mix_3d_t *gauss_mix, struct sample_3d_t sample);
+double hmm_b(struct gauss_mix_3d_t *gauss_mix, struct sample_3d_t sample);
 /* */
-float hmm_forward_scale_alpha(struct hmm_3d_t *hmm, struct sample_3d_t sample[], unsigned int sample_len, float scale[], float **alpha);
+double hmm_forward_scale_alpha(struct hmm_3d_t *hmm, struct sample_3d_t sample[], unsigned int sample_len, double scale[], double **alpha);
 /* */
-float hmm_forward_scale(struct hmm_3d_t *hmm, struct sample_3d_t sample[], unsigned int sample_len, float scale[]);
+double hmm_forward_scale(struct hmm_3d_t *hmm, struct sample_3d_t sample[], unsigned int sample_len, double scale[]);
 /* */
-float hmm_forward(struct hmm_3d_t *hmm, struct sample_3d_t sample[], unsigned int sample_len);
+double hmm_forward(struct hmm_3d_t *hmm, struct sample_3d_t sample[], unsigned int sample_len);
 /* */
-void hmm_backward_scale_beta(struct hmm_3d_t *hmm, struct sample_3d_t sample[], unsigned int sample_len, float scale[], float **beta);
+void hmm_backward_scale_beta(struct hmm_3d_t *hmm, struct sample_3d_t sample[], unsigned int sample_len, double scale[], double **beta);
 /* */
 //void hmm_backward_scale(struct hmm_3d_t *hmm, struct sample_3d_t sample[], unsigned int sample_len, float scale[]);
 /* */
 /* */
-float hmm_viterbi(struct hmm_3d_t *hmm, struct sample_3d_t sample[], unsigned int sample_len, unsigned char *reached_final_state);
+double hmm_viterbi(struct hmm_3d_t *hmm, struct sample_3d_t sample[], unsigned int sample_len, unsigned char *reached_final_state);
 /* */
 void hmm_baum_welch(struct hmm_3d_t *hmm, struct hmm_3d_t *hmm_est, struct sample_3d_t sample[], unsigned int sample_len);
 /* */

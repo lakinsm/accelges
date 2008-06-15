@@ -30,9 +30,9 @@
 #define MAX_ACCEL_VAL 4.0
 
 /* matrix determinant of size 3x3 */
-static float mat_det_3d(float mat[3][3]);
+static double mat_det_3d(double mat[3][3]);
 /* matrix inverse of size 3x3 */
-static void mat_inv_3d(float mat[3][3], float mat_inv[3][3]);
+static void mat_inv_3d(double mat[3][3], double mat_inv[3][3]);
 
 /* 
  * allocate memory for each mixture
@@ -40,7 +40,7 @@ static void mat_inv_3d(float mat[3][3], float mat_inv[3][3]);
 void gauss_mix_create_3d(struct gauss_mix_3d_t *gauss_mix, unsigned int mix_len)
 {
 	gauss_mix->mix_len = mix_len;
-	gauss_mix->weight = (float *)malloc(mix_len * sizeof(float));
+	gauss_mix->weight = (double *)malloc(mix_len * sizeof(double));
 	gauss_mix->each = (struct gauss_3d_t *)malloc(mix_len * sizeof(struct gauss_3d_t));
 }
 
@@ -58,9 +58,9 @@ void gauss_mix_delete_3d(struct gauss_mix_3d_t *gauss_mix)
  * trivariate gaussian probability density function
  * Spoken language processing: section 3.1.7.3. formula 3.82. page 93.
  */
-float gauss_prob_den_3d(struct gauss_3d_t *gauss, struct sample_3d_t sample)
+double gauss_prob_den_3d(struct gauss_3d_t *gauss, struct sample_3d_t sample)
 {
-	float mat_det = mat_det_3d(gauss->covar);
+	double mat_det = mat_det_3d(gauss->covar);
 	assert(mat_det != 0);
 	//printf("mat_det: %f\n", mat_det);
 	/* still have to enforce mat_det to not be 0.0*/
@@ -69,16 +69,16 @@ float gauss_prob_den_3d(struct gauss_3d_t *gauss, struct sample_3d_t sample)
 		return 1; /* not ok */	
 	}
 	
-	float mat_inv[3][3];
+	double mat_inv[3][3];
 	mat_inv_3d(gauss->covar, mat_inv);
 	
-	float accel1[3];
+	double accel1[3];
 	accel1[0] = sample.val[0] - gauss->mean[0];
 	accel1[1] = sample.val[1] - gauss->mean[1];
 	accel1[2] = sample.val[2] - gauss->mean[2];
 	
 	/* Mahalanobis distance */
-	float mahalanobis_dis =
+	double mahalanobis_dis =
 		(accel1[0] * mat_inv[0][0] + accel1[1] * mat_inv[1][0] + accel1[2] * mat_inv[2][0]) * accel1[0] +
 		(accel1[0] * mat_inv[0][1] + accel1[1] * mat_inv[1][1] + accel1[2] * mat_inv[2][1]) * accel1[1] +
 		(accel1[0] * mat_inv[0][2] + accel1[1] * mat_inv[1][2] + accel1[2] * mat_inv[2][2]) * accel1[2];
@@ -86,7 +86,7 @@ float gauss_prob_den_3d(struct gauss_3d_t *gauss, struct sample_3d_t sample)
 	/* determinant was less than zero and sqrtf(-something) is nan */
 	//float pdf = powf(M_E, mahalanobis_dis / - 2.0) / (powf(2 * M_PI, 1.5) * sqrtf(mat_det));
 	/* changed sqrtf(mat_det)) with powf(mat_det, 0.5)) */
-	float pdf = powf(M_E, mahalanobis_dis / - 2.0) / (powf(2 * M_PI, 1.5) * powf(mat_det, 0.5));
+	double pdf = pow(M_E, mahalanobis_dis / - 2.0) / (pow(2 * M_PI, 1.5) * pow(mat_det, 0.5));
 	 
 	return pdf;
 }
@@ -95,9 +95,9 @@ float gauss_prob_den_3d(struct gauss_3d_t *gauss, struct sample_3d_t sample)
  * trivariate gaussian discriminant function
  * Spoken language processing: section 4.2.1. formula 4.18. page 142.
  */
-float gauss_disc_3d(struct gauss_3d_t *gauss, struct sample_3d_t sample, float prior_prob)
+double gauss_disc_3d(struct gauss_3d_t *gauss, struct sample_3d_t sample, double prior_prob)
 {
-	return logf(gauss_prob_den_3d(gauss, sample)) + logf(prior_prob);
+	return log(gauss_prob_den_3d(gauss, sample)) + log(prior_prob);
 }
 
 /*
@@ -111,7 +111,7 @@ void gauss_rand_3d(struct gauss_3d_t *gauss)
 	
 	for (i = 0; i < 3; i++)
 	{
-		gauss->mean[i] = MAX_ACCEL_VAL * rand() / ((float)(RAND_MAX) + 1.0);
+		gauss->mean[i] = MAX_ACCEL_VAL * rand() / ((double)(RAND_MAX) + 1.0);
 	}
 	
 	for (i = 0; i < 3; i++)
@@ -120,7 +120,7 @@ void gauss_rand_3d(struct gauss_3d_t *gauss)
 		{
 			if (i == j)
 			{
-				gauss->covar[i][j] = MAX_ACCEL_VAL * rand() / ((float)(RAND_MAX) + 1.0);
+				gauss->covar[i][j] = MAX_ACCEL_VAL * rand() / ((double)(RAND_MAX) + 1.0);
 			}
 			else
 			{
@@ -139,7 +139,7 @@ void gauss_print_3d(struct gauss_3d_t *gauss)
 	printf("Means:\n");
 	for (i = 0; i < 3; i++)
 	{
-		printf("%f\t", gauss->mean[i]);
+		printf("%+f\t", gauss->mean[i]);
 	}
 	printf("\n");
 	printf("Covariances:\n");
@@ -147,7 +147,7 @@ void gauss_print_3d(struct gauss_3d_t *gauss)
 	{
 		for (j = 0; j < 3; j++)
 		{
-			printf("%f\t", gauss->covar[i][j]);
+			printf("%+f\t", gauss->covar[i][j]);
 		}
 		printf("\n");
 	}
@@ -157,9 +157,9 @@ void gauss_print_3d(struct gauss_3d_t *gauss)
  * trivariate gaussian mixture probability density function
  * Spoken language processing: section 3.1.7.3. formula 3.86. page 95
  */
-float gauss_mix_prob_den_3d(struct gauss_mix_3d_t *gauss_mix, struct sample_3d_t sample)
+double gauss_mix_prob_den_3d(struct gauss_mix_3d_t *gauss_mix, struct sample_3d_t sample)
 {
-	float pdf = 0.0;
+	double pdf = 0.0;
 	int i;
 	
 	for (i = 0; i < gauss_mix->mix_len; i++)
@@ -175,9 +175,9 @@ float gauss_mix_prob_den_3d(struct gauss_mix_3d_t *gauss_mix, struct sample_3d_t
  * trivariate gaussian mixture discriminant function
  * Spoken language processing: section 4.2.1. formula 4.18. page 142.
  */
-float gauss_mix_disc_3d(struct gauss_mix_3d_t *gauss_mix, struct sample_3d_t sample, float prior_prob)
+double gauss_mix_disc_3d(struct gauss_mix_3d_t *gauss_mix, struct sample_3d_t sample, double prior_prob)
 {
-	return logf(gauss_mix_prob_den_3d(gauss_mix, sample)) + logf(prior_prob);
+	return log(gauss_mix_prob_den_3d(gauss_mix, sample)) + log(prior_prob);
 }
 
 /*
@@ -188,9 +188,9 @@ void gauss_mix_den_est_3d(struct gauss_mix_3d_t *gauss_mix, struct gauss_mix_3d_
 {
 	unsigned int mix_len = gauss_mix->mix_len;
 	/* quantities */
-	float quan_2d[mix_len][sample_len];
-	float quan_1d[mix_len];
-	float quan_0d;
+	double quan_2d[mix_len][sample_len];
+	double quan_1d[mix_len];
+	double quan_0d;
 	int k, i, p, q;
 	
 	/* 4.103. */
@@ -235,7 +235,7 @@ void gauss_mix_den_est_3d(struct gauss_mix_3d_t *gauss_mix, struct gauss_mix_3d_
 	{
 		for (p = 0; p < 3; p++)
 		{
-			float sum = 0.0;
+			double sum = 0.0;
 			for (i = 0; i < sample_len; i++)
 			{
 				sum += quan_2d[k][i] * sample[i].val[p];
@@ -323,7 +323,7 @@ void gauss_mix_print_3d(struct gauss_mix_3d_t *gauss_mix)
 	printf("Weights:\n");
 	for (k = 0; k < mix_len; k++)
 	{
-		printf("%f\t", gauss_mix->weight[k]);
+		printf("%+f\t", gauss_mix->weight[k]);
 	}
 	printf("\n");
 	for (k = 0; k < mix_len; k++)
@@ -349,7 +349,7 @@ int gauss_mix_write_3d(struct gauss_mix_3d_t *gauss_mix, char *file_name)
 	}
 	
 	fwrite(&gauss_mix->mix_len, sizeof(unsigned int), 1, file);
-	fwrite(gauss_mix->weight, sizeof(float), mix_len, file);
+	fwrite(gauss_mix->weight, sizeof(double), mix_len, file);
 	fwrite(gauss_mix->each, sizeof(struct gauss_3d_t), mix_len, file);
 	
 	fclose(file);
@@ -374,7 +374,7 @@ int gauss_mix_read_3d(struct gauss_mix_3d_t *gauss_mix, char *file_name)
 	fread(&gauss_mix->mix_len, sizeof(unsigned int), 1, file);
 	mix_len = gauss_mix->mix_len;
 	gauss_mix_create_3d(gauss_mix, mix_len); /* create arrays */
-	fread(gauss_mix->weight, sizeof(float), mix_len, file);
+	fread(gauss_mix->weight, sizeof(double), mix_len, file);
 	fread(gauss_mix->each, sizeof(struct gauss_3d_t), mix_len, file);
 	
 	fclose(file);
@@ -386,9 +386,9 @@ int gauss_mix_read_3d(struct gauss_mix_3d_t *gauss_mix, char *file_name)
  * matrix determinant of size 3x3
  * http://mathworld.wolfram.com/Determinant.html
  */
-static float mat_det_3d(float mat[3][3])
+static double mat_det_3d(double mat[3][3])
 {		
-	float mat_det =
+	double mat_det =
 		mat[0][0] * mat[1][1] * mat[2][2] +
 		mat[0][1] * mat[1][2] * mat[2][0] +
 		mat[0][2] * mat[1][0] * mat[2][1] -
@@ -403,10 +403,10 @@ static float mat_det_3d(float mat[3][3])
  * matrix inverse of size 3x3
  * http://mathworld.wolfram.com/MatrixInverse.html
  */
-static void mat_inv_3d(float mat[3][3], float mat_inv[3][3])
+static void mat_inv_3d(double mat[3][3], double mat_inv[3][3])
 {
-	float mat_det = mat_det_3d(mat);
-	float mat_det_inv = 1 / mat_det;
+	double mat_det = mat_det_3d(mat);
+	double mat_det_inv = 1.0 / mat_det;
 	
 	mat_inv[0][0] = mat_det_inv * (mat[1][1] * mat[2][2] - mat[1][2] * mat[2][1]);
 	mat_inv[0][1] = mat_det_inv * (mat[0][2] * mat[2][1] - mat[0][1] * mat[2][2]);
