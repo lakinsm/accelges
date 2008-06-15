@@ -19,6 +19,7 @@
  *
  */
 
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
@@ -60,6 +61,7 @@ void gauss_mix_delete_3d(struct gauss_mix_3d_t *gauss_mix)
 float gauss_prob_den_3d(struct gauss_3d_t *gauss, struct sample_3d_t sample)
 {
 	float mat_det = mat_det_3d(gauss->covar);
+	assert(mat_det != 0);
 	//printf("mat_det: %f\n", mat_det);
 	/* still have to enforce mat_det to not be 0.0*/
 	if (mat_det == 0)

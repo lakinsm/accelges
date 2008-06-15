@@ -24,15 +24,26 @@
 
 #include "class.h"
 #include "gauss.h"
+#include "hmm.h"
 
 /* should hold a continuous gesture of 5 min (which is a lot) at 100 Hz */
 #define FRAME_LEN 30000
-#define FRAME_DIF 5
+/* more than half a second */
+#define FRAME_DIF 23
+/* also send to the recognizer some more frames, before the ones classified */
+#define FRAME_BEFORE 10
+/* FRAME_AFTER is not used in this release, it would have to wait for those frames */
+/* also send to the recognizer some more frames, after the ones classified */
+#define FRAME_AFTER 10
 
 /* configuration type */
 typedef struct config_t {
 	char noise_file_name[1024];
 	char motion_file_name[1024];
+	unsigned int model_len;
+	/* max 100 models; TODO: should be dynamically allocated */
+	char model_file_name[100][1024];
+	char model_cmd[100][1024];
 } config_t;
 
 #ifndef ACCEL_T
@@ -42,6 +53,9 @@ typedef struct accel_3d_t {
 	float val[3];
 } accel_3d_t;
 #endif
+
+/* geture recognized callback */
+typedef void (* ges_reco_cb)(char *result);
 
 /* sequence type */
 typedef struct seq_3d_t {
@@ -56,6 +70,11 @@ typedef struct ges_3d_t {
 	struct seq_3d_t seq;
 	unsigned char detected;
 	struct class_2c_t endpoint;
+	unsigned int model_len;
+	/* max 100 models */
+	struct hmm_3d_t model[100];
+	char model_cmd[100][1024];
+	ges_reco_cb handle_reco;
 } ges_t;
 
 /* populate ges structure with manual values */

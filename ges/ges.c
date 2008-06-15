@@ -19,6 +19,7 @@
  *
  */
 
+//#include <float.h>
 #include <libgen.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -29,6 +30,8 @@
 #include "class.h"
 #include "gauss.h"
 #include "ges.h"
+#include "hmm.h"
+#include "model.h"
 
 /* parse one line in the configuration file */
 static unsigned char parse_line(struct config_t *config, char *line);
@@ -108,28 +111,51 @@ void ges_process_3d(struct ges_3d_t *ges, struct accel_3d_t accel)
 		{
 			ges->seq.end = ges->seq.index;
 			ges->detected = 0;
+			//printf("detected with size: %d\n", ges->seq.end - ges->seq.begin); 
 			/* case when begin < end */
 			if (ges->seq.begin < ges->seq.end)
 			{
 				if (ges->seq.end - ges->seq.begin > FRAME_DIF)
 				{
+					int before = 0;
+					if (ges->seq.begin > FRAME_BEFORE)
+					{
+						before = FRAME_BEFORE;
+					}
+					
 					unsigned int frame_len = ges->seq.end - ges->seq.begin + 1;
-					struct accel_3d_t accels[frame_len];
-					memcpy(accels, &ges->seq.each[ges->seq.begin], frame_len * sizeof(sample_3d_t));
-					recognize(ges, accels, frame_len);
+					struct accel_3d_t accels[before + frame_len];
+					memcpy(&accels[before], &ges->seq.each[ges->seq.begin], frame_len * sizeof(sample_3d_t));
+					
+					if (before > 0)
+					{
+						memcpy(&accels[0], &ges->seq.each[ges->seq.begin - before], before * sizeof(sample_3d_t));
+					}
+					recognize(ges, accels, before + frame_len);
 				}
 			}
 			else /* case when begin > end */
 			{
 				if (FRAME_LEN - ges->seq.begin + ges->seq.end > FRAME_DIF)
 				{
+					int before = 0;
+					if (ges->seq.begin - ges->seq.end > FRAME_BEFORE)
+					{
+						before = FRAME_BEFORE;
+					}
 					unsigned int frame_len_end = FRAME_LEN - ges->seq.begin;
 					unsigned int frame_len_begin = ges->seq.end + 1;
 					unsigned int frame_len = frame_len_end + frame_len_begin;
-					struct accel_3d_t accels[frame_len];
-					memcpy(&accels[0], &ges->seq.each[ges->seq.begin], frame_len_end * sizeof(sample_3d_t));
-					memcpy(&accels[frame_len_end], &ges->seq.each[0], frame_len_begin * sizeof(accel_3d_t));
-					recognize(ges, accels, frame_len); 
+					struct accel_3d_t accels[before + frame_len];
+					memcpy(&accels[before], &ges->seq.each[ges->seq.begin], frame_len_end * sizeof(sample_3d_t));
+					memcpy(&accels[before + frame_len_end], &ges->seq.each[0], frame_len_begin * sizeof(accel_3d_t));
+					
+					if (before > 0)
+					{
+						memcpy(&accels[0], &ges->seq.each[ges->seq.begin - before], before * sizeof(sample_3d_t));
+					}
+					
+					recognize(ges, accels, before + frame_len); 
 				}
 			}
 		}
@@ -166,9 +192,18 @@ void ges_delete_3d(struct ges_3d_t *ges)
 void ges_read_3d(struct ges_3d_t *ges, struct config_t *config)
 {
 	gauss_mix_read_3d(&ges->endpoint.each[0], config->noise_file_name);	
-	gauss_mix_print_3d(&ges->endpoint.each[0]);
+	//gauss_mix_print_3d(&ges->endpoint.each[0]);
 	gauss_mix_read_3d(&ges->endpoint.each[1], config->motion_file_name);
-	gauss_mix_print_3d(&ges->endpoint.each[1]);
+	//gauss_mix_print_3d(&ges->endpoint.each[1]);
+	
+	ges->model_len = config->model_len;
+	int i;
+	for (i = 0; i < ges->model_len; i++)
+	{
+		hmm_read_3d(&ges->model[i], config->model_file_name[i]);
+		strcpy(ges->model_cmd[i], config->model_cmd[i]);
+		printf("%s\n", ges->model_cmd[i]); 
+	}
 }
 
 /* 
@@ -207,6 +242,8 @@ unsigned char ges_load_config(struct config_t *config, char *file_name)
 		return 0;
 	}
 	
+	config->model_len = 0;
+	
 	line_index = 0;
 	while (fgets(line, sizeof(line), file))
 	{
@@ -224,14 +261,76 @@ unsigned char ges_load_config(struct config_t *config, char *file_name)
 }
 
 /* 
- * recognize frames
+ * isolated recognition in continuous mode
+ * only one gesture is detected in the classified frames
  */
 static void recognize(struct ges_3d_t *ges, struct accel_3d_t accel[], unsigned int accel_len)
 {
-	printf("Processing gesture... (TO-DO: gesture recognition)\n");
+	//printf("Processing gesture... (TO-DO: gesture recognition)\n");
 	int i;
+	/*
 	for (i = 0; i < accel_len; i++)
-		printf("%f %f %f\n", accel[i].val[0], accel[i].val[1], accel[i].val[2]);
+	{
+		printf("%d:\t%+f\t%+f\t%+f\n", i, accel[i].val[0], accel[i].val[1], accel[i].val[2]);
+	}
+	// */
+	//float vals[ges->model_len];
+	unsigned char max_reached_final_state = 0;
+	float max = hmm_viterbi(&ges->model[0], accel, accel_len, &max_reached_final_state);
+	//float max = hmm_forward(&ges->model[0], accel, accel_len);
+	//float prev_max = max;
+	
+	int argmax = 0;
+	printf("Recognition results:\n");
+	for (i = 0; i < ges->model_len; i++)
+	{
+		//float possib_max = hmm_forward(&ges->model[i], accel, accel_len);
+		unsigned char possib_max_reached_final_state = 0; 
+		float possib_max = hmm_viterbi(&ges->model[i], accel, accel_len, &possib_max_reached_final_state);
+
+		//vals[i] = possib_max;
+		if (!max_reached_final_state)
+		{
+			max = possib_max;
+			max_reached_final_state = possib_max_reached_final_state;
+			argmax = i;
+		}
+		printf("%d: %e\n", i, possib_max);
+		if (possib_max_reached_final_state)
+		{ 
+			if (max < possib_max)
+			{
+				max = possib_max;
+				max_reached_final_state = possib_max_reached_final_state;
+				argmax = i;
+			}
+		}
+	}
+	
+	/*prev_max = -1.0e+07;
+	for (i = 0; i < ges->model_len; i++)
+	{
+		if (i != argmax)
+		{
+			if (prev_max < vals[i])
+			{
+				prev_max = vals[i];
+			}
+		}
+	}*/
+	
+	//printf("prev_max: %e\n", prev_max);
+	
+	if (max_reached_final_state)
+	{
+		/* call handler once the recognition is done */
+		ges->handle_reco(ges->model_cmd[argmax]);
+	}
+	else
+	{
+		printf("Sorry, didn't get that...\n");
+	}
+	
 	
 	//struct gauss_mix_3d_t gauss_mix_est;
 	//gauss_mix_create_3d(&gauss_mix_est, 1);
@@ -258,7 +357,7 @@ static unsigned char parse_line(struct config_t *config, char *line)
 	else
 	{
 		char cmd_name[1024];
-		unsigned int cmd_len = strcspn(line, " \t\n") / sizeof(char);
+		unsigned int cmd_len = strcspn(line, "\t\n") / sizeof(char);
 		strncpy(cmd_name, line, cmd_len * sizeof(char));
 		cmd_name[cmd_len] = '\0';
 		/* no command on this line */
@@ -269,10 +368,10 @@ static unsigned char parse_line(struct config_t *config, char *line)
 		
 		if (strcmp(cmd_name, "noise") == 0)
 		{
-			unsigned int no_param_len = strspn(&line[cmd_len], " \t\n") / sizeof(char);
+			unsigned int no_param_len = strspn(&line[cmd_len], "\t\n") / sizeof(char);
 			char *params = &line[cmd_len + no_param_len];
 			char param_name[1024];
-			unsigned int param_len = strcspn(params, " \t\n") / sizeof(char);
+			unsigned int param_len = strcspn(params, "\t\n") / sizeof(char);
 			strncpy(param_name, params, param_len);
 			param_name[param_len] = '\0';
 			
@@ -285,10 +384,10 @@ static unsigned char parse_line(struct config_t *config, char *line)
 		}
 		else if (strcmp(cmd_name, "motion") == 0)
 		{
-			unsigned int no_param_len = strspn(&line[cmd_len], " \t\n") / sizeof(char);
+			unsigned int no_param_len = strspn(&line[cmd_len], "\t\n") / sizeof(char);
 			char *params = &line[cmd_len + no_param_len];
 			char param_name[1024];
-			unsigned int param_len = strcspn(params, " \t\n") / sizeof(char);
+			unsigned int param_len = strcspn(params, "\t\n") / sizeof(char);
 			strncpy(param_name, params, param_len);
 			param_name[param_len] = '\0';
 			
@@ -301,7 +400,36 @@ static unsigned char parse_line(struct config_t *config, char *line)
 		}
 		else if (strncmp(line, "hmm", cmd_len) == 0)
 		{
-			// TO-DO: parse hmm line
+			// TODO: parse hmm line
+			unsigned int no_param_len = strspn(&line[cmd_len], "\t\n") / sizeof(char);
+			char *params = &line[cmd_len + no_param_len];
+			char param_name_1[1024];
+			unsigned int param_len_1 = strcspn(params, "\t\n") / sizeof(char);
+			strncpy(param_name_1, params, param_len_1);
+			// BUG HERE and also below
+			param_name_1[param_len_1] = '\0';
+			
+			if (param_name_1[0] == '\0')
+			{
+				return 0; /* must have param, so return failure */
+			}
+			
+			unsigned int no_param_len_2 = strspn(&line[cmd_len + no_param_len + param_len_1], " \t\n") / sizeof(char);
+			char *params_2 = &line[cmd_len + no_param_len + param_len_1 + no_param_len_2];
+			char param_name_2[1024];
+			unsigned int param_len_2 = strcspn(params_2, "\t\n") / sizeof(char);
+			// check length of param_len_2 with size of param_name_2!!!
+			strncpy(param_name_2, params_2, param_len_2);
+			param_name_2[param_len_2] = '\0';
+			
+			
+			/* model command that is returned when detected */
+			strcpy(config->model_cmd[config->model_len], param_name_1);
+			/* model file name to read data from */
+			strcpy(config->model_file_name[config->model_len], param_name_2);
+
+			//printf("arg %s and %s.\n", param_name_1, param_name_2);
+			config->model_len++;
 		}
 		else
 		{
