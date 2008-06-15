@@ -28,6 +28,8 @@
 #include "gauss.h"
 #include "ges.h"
 #include "gesapp.h"
+#include "hmm.h"
+#include "model.h"
 #include "wii.h"
 
 #define VERSION "0.1"
@@ -42,6 +44,9 @@ static unsigned char is_pressed;
 struct gauss_mix_3d_t gauss_mix;
 struct gauss_mix_3d_t gauss_mix_est;
 
+struct hmm_3d_t hmm;
+struct hmm_3d_t hmm_est;
+
 /* print welcome message */
 static void print_header(void);
 /* print all command line options */
@@ -52,6 +57,8 @@ static void print_version(void);
 static char parse_options(int argc, char **argv);
 /* catches the termination signal and closes the Wii */
 static void class_handle_signal(int signal);
+/* catches the termination signal and closes the Wii */
+static void model_handle_signal(int signal);
 
 /* this handler is called whenever the Wii sends acceleration reports */
 void class_handle_accel(unsigned char pressed, struct accel_3d_t accel)
@@ -89,12 +96,39 @@ void class_handle_accel(unsigned char pressed, struct accel_3d_t accel)
 	}
 }
 
+void model_handle_accel(unsigned char pressed, struct accel_3d_t accel)
+{
+	if (pressed)
+	{
+		is_pressed = 1;
+	}
+	
+	if ((pressed) && (is_pressed))
+	{
+		seq.each[seq.index] = accel;
+		seq.index = seq.index + 1;
+	}
+	else if ((!pressed) && (is_pressed))
+	{	
+		hmm_baum_welch(&hmm, &hmm_est, seq.each, seq.index - 1);
+		hmm_copy_3d(&hmm, &hmm_est);
+		hmm_print_3d(&hmm);
+		//gauss_mix_print_3d(&gauss_mix);
+		/* copies gauss_mix_est to gauss_mix (need to re-arrange the params to be consistent */
+		//gauss_mix_copy_3d(&gauss_mix, &gauss_mix_est);
+		
+		seq.index = 0;
+		is_pressed = 0;
+	}
+}
+
  /*
  * do not run in terminal: sudo hidd --search
  */
 int main(int argc, char **argv)
 {
 	unsigned int mix_len;
+	unsigned int state_len;
 	
 	print_header();
 	
@@ -109,6 +143,7 @@ int main(int argc, char **argv)
 			gauss_mix_rand_3d(&gauss_mix);
 			gauss_mix_print_3d(&gauss_mix); 
 			gauss_mix_write_3d(&gauss_mix, file_name);
+			gauss_mix_delete_3d(&gauss_mix);
 			
 			exit(0);
 			break;
@@ -160,13 +195,111 @@ int main(int argc, char **argv)
 			
 			break;
 		case 'l': /* new-model */
+			printf("Model %s\n", file_name);
+			printf("Number of states: ");
+			scanf("%d", &state_len);
+			hmm_create_3d(&hmm, state_len);
+			hmm_left_right_3d(&hmm);
+			/* don't use uniform initial estimates, use a left-right Bakis model */
+			//hmm_uniform_3d(&hmm);
+			int i;
+			for (i = 0; i < state_len; i++)
+			{
+				int mix_len = 1;
+				int k;
+				printf("State: %d\n", i);
+				printf("Hard-coded with 1 mixture\n");
+				gauss_mix_create_3d(&hmm.output_prob[i], mix_len);
+				gauss_mix_rand_3d(&hmm.output_prob[i]);
+				
+				/* override random values */
+				for (k = 0; k < mix_len; k++)
+				{
+					float val;
+					printf("Mean for x: ");
+					scanf("%f", &val);
+					hmm.output_prob[i].each[k].mean[0] = val;
+					printf("Mean for y: ");
+					scanf("%f", &val);
+					hmm.output_prob[i].each[k].mean[1] = val;
+					printf("Mean for z: ");
+					scanf("%f", &val);
+					hmm.output_prob[i].each[k].mean[2] = val;
+					
+					printf("Covariance for x: ");
+					scanf("%f", &val);
+					hmm.output_prob[i].each[k].covar[0][0] = val;
+					hmm.output_prob[i].each[k].covar[0][1] = 0.0;
+					hmm.output_prob[i].each[k].covar[0][2] = 0.0;
+					
+					printf("Covariance for y: ");
+					scanf("%f", &val);
+					hmm.output_prob[i].each[k].covar[1][0] = 0.0;
+					hmm.output_prob[i].each[k].covar[1][1] = val;
+					hmm.output_prob[i].each[k].covar[1][2] = 0.0;
+					
+					printf("Covariance for z: ");
+					scanf("%f", &val);
+					hmm.output_prob[i].each[k].covar[2][0] = 0.0;
+					hmm.output_prob[i].each[k].covar[2][1] = 0.0;
+					hmm.output_prob[i].each[k].covar[2][2] = val;
+				}
+			}
+			hmm_print_3d(&hmm);
+			hmm_write_3d(&hmm, file_name);
 			
+			exit(0);
 			break;
 		case 'm': /* view-model */
-		
+			printf("Model %s\n", file_name);
+			if (hmm_read_3d(&hmm, file_name) != 0)
+			{
+				exit(1);
+			}
+			hmm_print_3d(&hmm);
+			hmm_delete_3d(&hmm);
+			
 			break;
-		case 'n': /* new-model */
-		
+		case 'n': /* train-model */
+			printf("Model: %s\n", file_name);
+			if (hmm_read_3d(&hmm, file_name) != 0)
+			{
+				exit(1);
+			}
+			hmm_print_3d(&hmm);
+			hmm_create_3d(&hmm_est, hmm.state_len);
+			for (i = 0; i < hmm_est.state_len; i++)
+			{
+				gauss_mix_create_3d(&hmm_est.output_prob[i], hmm.output_prob[i].mix_len);
+			}
+			//hmm_print_3d(&hmm_est);
+			
+			seq.index = 0;
+			is_pressed = 0;
+			wii.handle_accel = model_handle_accel;
+	
+			printf("Searching... (Press 1 and 2 on the Wii)\n");
+			if (wii_search(&wii, 5) < 0)
+			{
+				fprintf(stderr, "Could not find the Wii.\n");
+				exit(1);
+			}
+			printf("Found.\n");
+	
+			if (wii_connect(&wii) < 0)
+			{
+				fprintf(stderr, "Could not connect to the Wii.\n");
+				exit(1);
+			}
+			printf("Connected. (Press and hold A then make gesture. Release when done.)\n");
+	
+			/* catch terminate signal to stop the read thread and close sockets */
+			signal(SIGINT, model_handle_signal);
+			signal(SIGTERM, model_handle_signal);
+	
+			wii_set_leds(&wii, 0, 0, 0, 1);
+			wii_talk(&wii); /* will enter loop and never get out */
+			
 			break;
 		default:
 
@@ -305,6 +438,27 @@ static void class_handle_signal(int signal)
 			wii_disconnect(&wii);
 			/* when finished with training the class, save it to file */
 			gauss_mix_write_3d(&gauss_mix, file_name);
+			
+			printf("Disconnected.\n");
+			fflush(stdout);
+			fflush(stderr);
+			exit(0);
+			break;
+		default:
+			break;
+	}
+}
+
+static void model_handle_signal(int signal)
+{
+	switch (signal)
+	{
+		case SIGINT:
+		case SIGTERM:
+			wii_set_leds(&wii, 1, 0, 0, 0);
+			wii_disconnect(&wii);
+			/* when finished with training the class, save it to file */
+			hmm_write_3d(&hmm, file_name);
 			
 			printf("Disconnected.\n");
 			fflush(stdout);
