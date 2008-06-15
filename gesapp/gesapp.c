@@ -60,6 +60,115 @@ static void class_handle_signal(int signal);
 /* catches the termination signal and closes the Wii */
 static void model_handle_signal(int signal);
 
+static void show_handle_signal(int signal);
+
+char prev_state[4] = "000";
+float prev_val[3] = { 0.0, 0.0, 0.0};
+unsigned int count = 1;
+
+void show_handle_accel(unsigned char pressed, struct accel_3d_t accel)
+{
+	if (pressed)
+	{
+		printf("%+f\t%+f\t%+f\t", accel.val[0], accel.val[1], accel.val[2]);
+		char state[4] = "\0";
+		
+		if (accel.val[0] > 0.4)
+			strcat(state, "+");
+		else if (accel.val[0] < -0.4)
+			strcat(state, "-");
+		else
+			strcat(state, "0");
+		
+		if (accel.val[1] > 0.4)
+			strcat(state, "+");
+		else if (accel.val[1] < -0.4)
+			strcat(state, "-");
+		else
+			strcat(state, "0");
+		
+		if (accel.val[2] > 0.4)
+			strcat(state, "+");
+		else if (accel.val[2] < -0.4)
+			strcat(state, "-");
+		else
+			strcat(state, "0");
+		
+		printf("%s\t", state);
+		
+		if (strcmp(state, prev_state) != 0)
+		{
+			printf("%+f\t%+f\t%+f\n", 
+				prev_val[0] / count, 
+				prev_val[1] / count, 
+				prev_val[2] / count);
+			prev_val[0] = accel.val[0];
+			prev_val[1] = accel.val[1];
+			prev_val[2] = accel.val[2];
+			count = 1;
+		} else {
+			prev_val[0] += accel.val[0];
+			prev_val[1] += accel.val[1];
+			prev_val[2] += accel.val[2];
+			count++;
+			printf("\n");
+		}
+			
+		strcpy(prev_state, state);
+		is_pressed = 1;
+	}
+	
+	if ((pressed) && (is_pressed))
+	{
+		seq.each[seq.index] = accel;
+		seq.index = seq.index + 1;
+	}
+	else if ((!pressed) && (is_pressed)) /* released */
+	{
+		printf("%+f\t%+f\t%+f\t", accel.val[0], accel.val[1], accel.val[2]);
+		char state[4] = "\0";
+		
+		if (accel.val[0] > 0.4)
+			strcat(state, "+");
+		else if (accel.val[0] < -0.4)
+			strcat(state, "-");
+		else
+			strcat(state, "0");
+		
+		if (accel.val[1] > 0.4)
+			strcat(state, "+");
+		else if (accel.val[1] < -0.4)
+			strcat(state, "-");
+		else
+			strcat(state, "0");
+		
+		if (accel.val[2] > 0.4)
+			strcat(state, "+");
+		else if (accel.val[2] < -0.4)
+			strcat(state, "-");
+		else
+			strcat(state, "0");
+		
+		printf("%s\t", state);
+		
+		printf("%+f\t%+f\t%+f\n", 
+				prev_val[0] / count, 
+				prev_val[1] / count, 
+				prev_val[2] / count);
+		strcpy(prev_state, "000");
+		prev_val[0] = 0.0;
+		prev_val[1] = 0.0;
+		prev_val[2] = 0.0;
+		count = 1;
+		
+		//unsigned int seq_len = seq.index - 1;
+		printf("End of push/release.\n");
+		
+		seq.index = 0;
+		is_pressed = 0;
+	}
+}
+
 /* this handler is called whenever the Wii sends acceleration reports */
 void class_handle_accel(unsigned char pressed, struct accel_3d_t accel)
 {
@@ -301,6 +410,33 @@ int main(int argc, char **argv)
 			wii_talk(&wii); /* will enter loop and never get out */
 			
 			break;
+		case 's': /* show-accel */
+	
+			wii.handle_accel = show_handle_accel;
+	
+			printf("Searching... (Press 1 and 2 on the Wii)\n");
+			if (wii_search(&wii, 5) < 0)
+			{
+				fprintf(stderr, "Could not find the Wii.\n");
+				exit(1);
+			}
+			printf("Found.\n");
+	
+			if (wii_connect(&wii) < 0)
+			{
+				fprintf(stderr, "Could not connect to the Wii.\n");
+				exit(1);
+			}
+			printf("Connected. (Press and hold A to see acceleration)\n");
+	
+			/* catch terminate signal to stop the read thread and close sockets */
+			signal(SIGINT, show_handle_signal);
+			signal(SIGTERM, show_handle_signal);
+	
+			wii_set_leds(&wii, 0, 0, 0, 1);
+			wii_talk(&wii); /* will enter loop and never get out */
+			
+			break;
 		default:
 
 			exit(1);
@@ -334,6 +470,7 @@ static void print_usage(char *file_name)
 	printf("Options:\n");
 	printf("  Class: --new-class <class> | --view-class <class> | --train-class <class>\n");
 	printf("  Model: --new-model <model> | --view-model <model> | --train-model <model>\n");
+	printf("  Misc: --show-accel\n");
 }
 
 /*
@@ -360,13 +497,14 @@ static char parse_options(int argc, char **argv)
 		{ "new-model", required_argument, 0, 'l' },
 		{ "view-model",  required_argument, 0, 'm' },
 		{ "train-model", required_argument, 0, 'n' },
+		{ "show-accel", no_argument, 0, 's' },
 		{ "help", no_argument, 0, 'h' },
 		{ 0, 0, 0, 0 }
 	};
 	
 	/* don't display errors to stderr */
 	opterr = 0;
-	while ((long_opt_val = getopt_long(argc, argv, "vb:c:d:l:m:n:h", long_opts, &long_opt_ind)) != -1) 
+	while ((long_opt_val = getopt_long(argc, argv, "vb:c:d:l:m:n:sh", long_opts, &long_opt_ind)) != -1) 
 	{
 		switch (long_opt_val)
 		{
@@ -410,6 +548,9 @@ static char parse_options(int argc, char **argv)
 				file_name[sizeof(file_name) / sizeof(file_name[0]) - 1] = '\0';
 
 				return 'n';
+				break;
+			case 's':
+				return 's';
 				break;
 			case 'h':
 			case '?':
@@ -459,6 +600,25 @@ static void model_handle_signal(int signal)
 			wii_disconnect(&wii);
 			/* when finished with training the class, save it to file */
 			hmm_write_3d(&hmm, file_name);
+			
+			printf("Disconnected.\n");
+			fflush(stdout);
+			fflush(stderr);
+			exit(0);
+			break;
+		default:
+			break;
+	}
+}
+
+static void show_handle_signal(int signal)
+{
+	switch (signal)
+	{
+		case SIGINT:
+		case SIGTERM:
+			wii_set_leds(&wii, 1, 0, 0, 0);
+			wii_disconnect(&wii);
 			
 			printf("Disconnected.\n");
 			fflush(stdout);
