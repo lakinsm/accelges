@@ -263,6 +263,20 @@ int main(int argc, char **argv)
 				exit(1);
 			}
 			gauss_mix_print_3d(&gauss_mix);
+			char gnuplot_file_name[1024] = "\0";
+			strcpy(gnuplot_file_name, file_name);
+			strcat(gnuplot_file_name, ".gnu");
+			if (gauss_mix_write_gnuplot_3d(&gauss_mix, gnuplot_file_name) == 0)
+			{
+			
+				printf("Wrote script for gnuplot at %s\n", gnuplot_file_name);
+			
+				char gnuplot_cmd[1024] = "gnuplot ";
+				strcat(gnuplot_cmd, gnuplot_file_name);
+				printf("Running %s\n", gnuplot_cmd);
+				system(gnuplot_cmd);
+				printf("Returned.\n");
+			}
 			gauss_mix_delete_3d(&gauss_mix);
 			
 			exit(0);
