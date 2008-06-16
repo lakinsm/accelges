@@ -5,7 +5,12 @@ noise	noise.gauss
 motion	motion.gauss
 
 #hmm gestures (as many as you like)
-#hmm	next	right.hmm
-#hmm	prev	left.hmm
-#hmm	setVolumeRelative 50	up.hmm
-#hmm	mute	forward.hmm
+#separate like this: hmm\tcommand with spaces\tfile_name
+#command with spaces is from amarok's player object in dcop
+#to see more commands use: dcop amarok player
+hmm	next	right.hmm
+hmm	prev	left.hmm
+hmm	setVolumeRelative 50	up.hmm
+hmm	setVolumeRelative -30	down.hmm
+hmm	mute	forward.hmm
+hmm	playPause	throw.hmm
