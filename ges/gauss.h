@@ -70,4 +70,6 @@ int gauss_mix_write_3d(struct gauss_mix_3d_t *gauss_mix, char *file_name);
 /* read trivariate gaussian mixture from file */
 int gauss_mix_read_3d(struct gauss_mix_3d_t *gauss_mix, char *file_name);
 
+int gauss_mix_write_gnuplot_3d(struct gauss_mix_3d_t *gauss_mix, char *file_name);
+
 #endif /*GAUSS_H_*/

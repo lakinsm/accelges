@@ -111,7 +111,7 @@ void ges_process_3d(struct ges_3d_t *ges, struct accel_3d_t accel)
 		{
 			ges->seq.end = ges->seq.index;
 			ges->detected = 0;
-			printf("detected with size: %d\n", ges->seq.end - ges->seq.begin); 
+			//printf("detected with size: %d\n", ges->seq.end - ges->seq.begin); 
 			/* case when begin < end */
 			if (ges->seq.begin < ges->seq.end)
 			{

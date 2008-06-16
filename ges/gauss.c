@@ -22,6 +22,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <math.h>
 #include <time.h>
 
@@ -417,4 +418,55 @@ static void mat_inv_3d(double mat[3][3], double mat_inv[3][3])
 	mat_inv[2][0] = mat_det_inv * (mat[1][0] * mat[2][1] - mat[1][1] * mat[2][0]);
 	mat_inv[2][1] = mat_det_inv * (mat[0][1] * mat[2][0] - mat[0][0] * mat[2][1]);
 	mat_inv[2][2] = mat_det_inv * (mat[0][0] * mat[1][1] - mat[0][1] * mat[1][0]);
+}
+
+int gauss_mix_write_gnuplot_3d(struct gauss_mix_3d_t *gauss_mix, char *file_name)
+{
+	FILE *file;
+	file = fopen(file_name, "w");
+	if (file == 0)
+	{
+		perror("fopen");
+		return -1;
+	}
+	
+	char svg[1024] = "\0";
+	strcpy(svg, file_name);
+	strcat(svg, ".svg");
+	
+	fprintf(file, "set terminal svg enhanced fname 'serif' fsize 7\n");
+	fprintf(file, "set output \"%s\"\n", svg);
+	
+	fprintf(file, "set samples 1001\n");
+	fprintf(file, "set xtics autofreq\n");
+	fprintf(file, "set ytics autofreq\n");
+	fprintf(file, "set xlabel \"acceleration\"\n");
+	fprintf(file, "set ylabel \"pdf\"\n");
+	fprintf(file, "set xrange [-4.0:+4.0]\n");
+	fprintf(file, "set yrange [+0.0:+1.0]\n");
+	//fprintf(file, "set format x \"%.1f\"\n");
+	//fprintf(file, "set format y \"%.1f\"\n");
+	
+	fprintf(file, "set title \"class\"\n");
+	
+	fprintf(file, "invsqrt2pi = 0.398942280401433\n");
+	fprintf(file, "normal(x,mu,sigma)=sigma<=0?1/0:invsqrt2pi/sigma*exp(-0.5*((x-mu)/sigma)**2)\n");
+	
+	//fprintf(file, "set arrow 1 from 0.0, 0.0 to 0.0, 1.0 nohead lt 0\n");
+	
+	fprintf(file, "plot \\\n");
+	int k;
+	for (k = 0; k < gauss_mix->mix_len; k++)
+	{
+		fprintf(file, "normal(x, %f, %f) title \"mix %d on X\",\\\n",
+			gauss_mix->each[k].mean[0], gauss_mix->each[k].covar[0][0], k);
+		fprintf(file, "normal(x, %f, %f) title \"mix %d on Y\",\\\n",
+			gauss_mix->each[k].mean[1], gauss_mix->each[k].covar[1][1], k);
+		fprintf(file, "normal(x, %f, %f) title \"mix %d on Z\"\n",
+			gauss_mix->each[k].mean[2], gauss_mix->each[k].covar[2][2], k);
+	}
+	
+	fclose(file);
+	
+	return 0;	
 }
