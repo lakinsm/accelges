@@ -1,0 +1,10 @@
+# accelerometer-based gestures configuration file
+
+# classifier classes (required)
+noise	noise.gauss
+motion	motion.gauss
+
+#hmm gestures (as many as you like)
+#separate like this: hmm\tcommand with spaces\tfile_name
+hmm	echo "KeyStr Right" | xmacroplay -d 3 :0	right.hmm
+hmm	echo "KeyStr Left" | xmacroplay -d 3 :0	left.hmm

@@ -65,10 +65,11 @@ void handle_reco(char *reco)
 {
 	char cmd[1024];
 	cmd[0] = '\0';
-	strcat(cmd, "dcop amarok player ");
+	//strcat(cmd, "dcop amarok player ");
 	/* reco is specified in the call/call.ges file */
 	/* reco might be play, pause, next, prev, or etc. */
-	strcat(cmd, reco);
+	//strcat(cmd, reco);
+	strcpy(cmd, reco);
 	printf("Executing command: %s\n", cmd);
 	system(cmd); // or execl ???
 	printf("Returned after executing command.\n"); 
