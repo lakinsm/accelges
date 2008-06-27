@@ -1,0 +1,15 @@
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+libdir=@libdir@
+includedir=@includedir@
+
+Package: gesd
+Version: @VERSION@
+Description: Accel-based gesture recognition daemon
+Section: misc
+Priority: optional
+Maintainer: Paul-Valentin Borza
+Architecture: armv4t
+Homepage: http://gestures.borza.ro
+Depends: libges
+Source: ${SRC}
