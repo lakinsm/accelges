@@ -1,0 +1,14 @@
+# (C) 2008 OpenMoko Inc. Paul-Valentin Borza
+
+AM_CFLAGS = -Iinclude -I../ges/include -I../accelwii/include -I../accelneo/include \
+	-Wall -std=gnu99
+
+bin_PROGRAMS = gesapp
+
+gesapp_SOURCES = \
+	src/gesapp.c
+
+#bin_SCRIPTS =
+
+gesapp_LDADD  = -lges -laccelwii -laccelneo -lbluetooth -lm
+gesapp_LDFLAGS = -L../lib
