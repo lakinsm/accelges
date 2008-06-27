@@ -1,0 +1,9 @@
+# (C) 2008 OpenMoko Inc. Paul-Valentin Borza
+
+AM_CFLAGS = -Iinclude -Wall -std=gnu99
+
+lib_LTLIBRARIES = libaccelwii.la
+
+libaccelwii_la_SOURCES = \
+	src/accelwii.c
+
