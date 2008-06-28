@@ -121,7 +121,7 @@ void ges_process_3d(struct ges_3d_t *ges, struct accel_3d_t accel)
 			ges->detected = 0;
 			ges->seq.till_end = FRAME_AFTER;
 		
-			printf("Gesture detected with size: %d\n", ges->seq.end - ges->seq.begin + 1 - FRAME_AFTER);
+			//printf("Gesture detected with size: %d\n", ges->seq.end - ges->seq.begin + 1 - FRAME_AFTER);
 				 
 			/* case when begin < end */
 			if (ges->seq.begin < ges->seq.end)
@@ -204,9 +204,9 @@ void ges_delete_3d(struct ges_3d_t *ges)
 void ges_read_3d(struct ges_3d_t *ges, struct config_t *config)
 {
 	gauss_mix_read_3d(&ges->endpoint.each[0], config->noise_file_name);	
-	gauss_mix_print_3d(&ges->endpoint.each[0]);
+	//gauss_mix_print_3d(&ges->endpoint.each[0]);
 	gauss_mix_read_3d(&ges->endpoint.each[1], config->motion_file_name);
-	gauss_mix_print_3d(&ges->endpoint.each[1]);
+	//gauss_mix_print_3d(&ges->endpoint.each[1]);
 	
 	ges->model_len = config->model_len;
 	int i;
@@ -281,7 +281,7 @@ static void recognize(struct ges_3d_t *ges, struct accel_3d_t accel[], unsigned 
 	if (ges->model_len < 2)
 		return;
 		
-	printf("Received %d frames.\n", accel_len);
+	//printf("Received %d frames.\n", accel_len);
 	//printf("Processing gesture... (TO-DO: gesture recognition)\n");
 	int i;
 	/*
@@ -309,20 +309,20 @@ static void recognize(struct ges_3d_t *ges, struct accel_3d_t accel[], unsigned 
 	//}
 	
 	int argmax = 0;
-	printf("Recognition results:\n");
+	//printf("Recognition results:\n");
 	for (i = 0; i < ges->model_len; i++)
 	{
 		//float possib_max = hmm_forward(&ges->model[i], accel, accel_len);
 		//unsigned char possib_max_reached_final_state = 0; 
 		//double possib_max = hmm_viterbi(&ges->model[i], accel, accel_len, decoded_states);
 		vals[i] = hmm_viterbi(&ges->model[i], accel, accel_len, decoded_states);
-		printf("%s:\n", ges->model_cmd[i]);
+		//printf("%s:\n", ges->model_cmd[i]);
 		int t;
-		for (t = 0; t < accel_len; t++)
-		{
-			printf("%d", decoded_states[t]);
-		}
-		printf("\n");
+		//for (t = 0; t < accel_len; t++)
+		//{
+		//	printf("%d", decoded_states[t]);
+		//}
+		//printf("\n");
 	
 		/* prune if the last state is not the final state */
 		if (decoded_states[accel_len - 1] != ges->model[i].state_len - 1)
@@ -343,7 +343,7 @@ static void recognize(struct ges_3d_t *ges, struct accel_3d_t accel[], unsigned 
 			for (j = 0; j < ges->model[i].state_len; j++)
 			{
 				state_prob[j] = (double)state_duration[j] / accel_len;
-				printf("state prob %d: %f\n", j, state_prob[j]);
+				//printf("state prob %d: %f\n", j, state_prob[j]);
 			}
 			double mean = 1.0 / ges->model[i].state_len;
 			for (j = 0; j < ges->model[i].state_len; j++)
@@ -418,7 +418,7 @@ static void recognize(struct ges_3d_t *ges, struct accel_3d_t accel[], unsigned 
 	}
 	else
 	{
-		printf("Sorry, didn't get that...\n");
+		printf("No match.\n");
 	}
 	
 	//double prev_max = -1.0e+07;
