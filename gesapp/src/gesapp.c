@@ -298,7 +298,7 @@ int main(int argc, char **argv)
  */
 static void print_header(void)
 {
-	printf("gesapp: (C) 2008 OpenMoko Inc.  Paul-Valentin Borza\n"
+	printf("gesapp: (C) 2008 OpenMoko Inc. Paul-Valentin Borza\n"
 		"This program is free software under the terms of the GNU General Public License.\n\n");
 }
 
