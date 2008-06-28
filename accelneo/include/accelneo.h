@@ -21,8 +21,19 @@
 #ifndef ACCELNEO_H_
 #define ACCELNEO_H_
 
+#ifndef ACCEL_T
+#define ACCEL_T
+/* acceleration */
+typedef struct accel_3d_t {
+	float val[3];
+} accel_3d_t;
+#endif
+
+typedef void (* simple_handle_accel_3d_t)(struct accel_3d_t accel);
+
 typedef struct neo_t {
 	int in_desc;
+	simple_handle_accel_3d_t handle_accel;
 } neo_t;
 
 unsigned char neo_open(struct neo_t *neo);
