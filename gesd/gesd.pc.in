@@ -12,4 +12,5 @@ Maintainer: Paul-Valentin Borza
 Architecture: armv4t
 Homepage: http://gestures.borza.ro
 Depends: libges
+Libs: -L../lib -lges
 Source: ${SRC}

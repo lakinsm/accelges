@@ -51,6 +51,16 @@ static void print_version(void);
 static unsigned char parse_options(int argc, char **argv);
 /* catches the termination signal and closes the Wii */
 static void handle_signal(int signal);
+/* catches the termination signal and closes the Wii */
+static void neo_handle_signal(int signal);
+
+/* this handler is called whenever the Wii sends acceleration reports */
+void neo_handle_accel(struct accel_3d_t accel)
+{
+	/* further call the recognizer */
+	ges_process_3d(&ges, accel);
+	//printf("%+f\t%+f\t%+f\n", accel.val[0], accel.val[1], accel.val[2]);
+}
 
 /* this handler is called whenever the Wii sends acceleration reports */
 void handle_accel(unsigned char pressed, struct accel_3d_t accel)
@@ -75,9 +85,9 @@ void handle_reco(char *reco)
 	/* reco might be play, pause, next, prev, or etc. */
 	//strcat(cmd, reco);
 	strcpy(cmd, reco);
-	printf("Executing command: %s\n", cmd);
+	printf("Run: %s\n", cmd);
 	system(cmd); // or execl ???
-	printf("Returned after executing command.\n"); 
+	printf("Returned.\n"); 
 }
 
 /*
@@ -134,6 +144,11 @@ int main(int argc, char **argv)
 	{
 		if (neo_open(&neo))
 		{
+			neo.handle_accel = neo_handle_accel;
+			
+			signal(SIGINT, neo_handle_signal);
+			signal(SIGTERM, neo_handle_signal);
+		
 			neo_begin_read(&neo);
 		}
 	}
@@ -252,3 +267,25 @@ static void handle_signal(int signal)
 			break;
 	}
 }
+
+/*
+ * catches the termination signal and disposes the Wii
+ */
+static void neo_handle_signal(int signal)
+{
+	switch (signal)
+	{
+		case SIGINT:
+		case SIGTERM:
+			neo_close(&neo);
+			printf("Closed device.\n");
+			ges_delete_3d(&ges);
+			fflush(stdout);
+			fflush(stderr);
+			exit(0);
+			break;
+		default:
+			break;
+	}
+}
+
