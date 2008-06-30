@@ -1,0 +1,17 @@
+# accelerometer-based gestures configuration file
+
+# classifier classes (required)
+noise	noise.gauss
+motion	motion.gauss
+
+#hmm gestures (as many as you like)
+#separate like this: hmm\tcommand with spaces\tfile_name
+#command with spaces is from amarok's player object in dcop
+#to see more commands use: dcop amarok player
+hmm	dcop amarok player next	right.hmm
+hmm	dcop amarok player prev	left.hmm
+hmm	dcop amarok player setVolumeRelative 50	up.hmm
+hmm	dcop amarok player setVolumeRelative -30	down.hmm
+#hmm	dcop amarok player mute	forward.hmm
+hmm	dcop amarok player playPause	z.hmm
+hmm	dcop amarok player stop	triangle.hmm
