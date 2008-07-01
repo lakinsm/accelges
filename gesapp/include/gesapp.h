@@ -26,4 +26,10 @@
 /* this is the handler that is used when class options are received */
 void class_handle_accel(unsigned char pressed, struct accel_3d_t accel);
 
+typedef enum device {
+	dev_none = 0,
+	dev_wii = 1,
+	dev_neo	= 2
+} device;
+
 #endif /*GESAPP_H_*/

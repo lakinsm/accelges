@@ -31,11 +31,17 @@
 #include "hmm.h"
 #include "model.h"
 #include "accelwii.h"
+#include "accelneo.h"
 
 #define VERSION "0.1"
 
+enum device used_device;
+
 /* wii */
 static struct wii_t wii;
+
+static neo_t neo;
+
 /* sequence */
 static struct seq_3d_t seq;
 static char file_name[1024];
