@@ -100,6 +100,9 @@ static void model_handle_signal(int signal);
 /* catches the termination signal and closes the Wii */
 static void show_handle_signal(int signal);
 
+/* catches the termination signal and closes the Neo */
+static void neo_show_handle_signal(int signal);
+
 /*
  * this handler is called whenever the Wii sends acceleration reports
  */
@@ -211,6 +214,13 @@ void show_handle_accel(unsigned char pressed, struct accel_3d_t accel)
 	}
 }
 
+/* this handler is called whenever the Wii sends acceleration reports */
+void neo_show_handle_accel(struct accel_3d_t accel)
+{
+	/* further call the recognizer */
+	printf("%+f\t%+f\t%+f\n", accel.val[0], accel.val[1], accel.val[2]);
+}
+
 /*
  * this handler is called whenever the Wii sends acceleration reports 
  */
@@ -279,7 +289,13 @@ int main(int argc, char **argv)
 			exit(0);
 			break;
 		case 's': /* show-accel */
-			show_accel();
+			if (used_device == dev_wii) {
+				show_accel();
+			} else if (used_device = dev_neo) {
+				
+			} else {
+				exit(1);
+			}
 				
 			exit(0);
 			break;
@@ -343,6 +359,8 @@ static char parse_options(int argc, char **argv)
 	int long_opt_val = 0;
 	
 	static struct option long_opts[] = {
+		{ "wii", no_argument, 0, 'w' },
+		{ "neo", no_argument, 0, 'q' },
 		{ "new-class", required_argument, 0, 'b' },
 		{ "view-class", required_argument, 0, 'c' },
 		{ "train-class", required_argument, 0, 'd' },
@@ -354,13 +372,23 @@ static char parse_options(int argc, char **argv)
 		{ "help", no_argument, 0, 'h' },
 		{ 0, 0, 0, 0 }
 	};
-	
+
+	used_device = dev_none;
+		
 	/* don't display errors to stderr */
 	opterr = 0;
 	while ((long_opt_val = getopt_long(argc, argv, "b:c:d:l:m:n:svh", long_opts, &long_opt_ind)) != -1) 
 	{
 		switch (long_opt_val)
 		{
+			case 'w':
+				used_device = dev_wii;
+				
+				break;
+			case 'q':
+				used_device = dev_neo;
+				
+				break;
 			case 'b': /* new-class */
 			case 'c': /* view-class */
 			case 'd': /* train-class */
@@ -667,6 +695,22 @@ static void show_accel(void)
 }
 
 /*
+ * show-accel mode
+ */
+static void neo_show_accel(void)
+{
+	if (neo_open(&neo))
+		{
+			neo.handle_accel = neo_show_handle_accel;
+			
+			signal(SIGINT, neo_show_handle_signal);
+			signal(SIGTERM, neo_show_handle_signal);
+		
+			neo_begin_read(&neo);
+		}	
+}
+
+/*
  * catches the termination signal and disposes the Wii
  * for the train-class mode
  */
@@ -730,6 +774,27 @@ static void show_handle_signal(int signal)
 			wii_disconnect(&wii);
 			
 			printf("Disconnected.\n");
+			fflush(stdout);
+			fflush(stderr);
+			exit(0);
+			break;
+		default:
+			break;
+	}
+}
+
+/*
+ * catches the termination signal and disposes the Neo
+ */
+static void neo_show_handle_signal(int signal)
+{
+	switch (signal)
+	{
+		case SIGINT:
+		case SIGTERM:
+			neo_close(&neo);
+			printf("Closed device.\n");
+
 			fflush(stdout);
 			fflush(stderr);
 			exit(0);
