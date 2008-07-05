@@ -44,6 +44,8 @@ static neo_t neo;
 
 /* sequence */
 static struct seq_3d_t seq;
+unsigned char detected;
+struct class_2c_t endpoint;
 static char file_name[1024];
 static unsigned char is_pressed;
 
@@ -92,6 +94,9 @@ static void train_model(void);
 
 /* show-accel mode */
 static void show_accel(void);
+/* show-accel mode */
+static void neo_show_accel(void);
+static void neo_show_handle_accel_process(struct accel_3d_t accels[], unsigned int accel_len);
 
 /* catches the termination signal and closes the Wii */
 static void class_handle_signal(int signal);
@@ -214,11 +219,130 @@ void show_handle_accel(unsigned char pressed, struct accel_3d_t accel)
 	}
 }
 
-/* this handler is called whenever the Wii sends acceleration reports */
+/* this handler is called whenever the Neo sends acceleration reports */
 void neo_show_handle_accel(struct accel_3d_t accel)
 {
-	/* further call the recognizer */
-	printf("%+f\t%+f\t%+f\n", accel.val[0], accel.val[1], accel.val[2]);
+	/* increment and save current frame (uses a circular list) */
+	unsigned int prev_index = seq.index;
+	seq.index = (seq.index + 1) % FRAME_LEN;
+	seq.each[seq.index] = accel;
+	
+	/* extract feature vector */
+	sample_3d_t feature;
+	ges_fea_3d(&seq, seq.index, prev_index, &feature);
+	
+	//printf("%f\t%f\t%f\n", feature.val[0], feature.val[1], feature.val[2]);
+	
+	/* motion has index 1 and noise has index 0 */
+	if (class_max_2c(&endpoint, feature) == 1)
+	{
+		/* we want motion */
+		if (!detected)
+		{
+			seq.begin = seq.index;
+			detected = 1;
+			seq.till_end = FRAME_AFTER;
+		}
+	}
+	else
+	{
+		/* noise detected */
+		if (detected)
+		{
+			//printf("detected with size: %d\n", ges->seq.index - ges->seq.begin + 1);
+			if (seq.till_end > 0)
+				seq.till_end--;
+		}
+		if (seq.till_end == 0)
+		{
+			seq.end = seq.index;
+			detected = 0;
+			seq.till_end = FRAME_AFTER;
+		
+			//printf("Gesture detected with size: %d\n", ges->seq.end - ges->seq.begin + 1 - FRAME_AFTER);
+				 
+			/* case when begin < end */
+			if (seq.begin < seq.end)
+			{	
+				if (seq.end - seq.begin > FRAME_DIF + FRAME_AFTER)
+				{
+					int before = 0;
+					if (seq.begin > FRAME_BEFORE)
+					{
+						before = FRAME_BEFORE;
+					}
+					
+					unsigned int frame_len = seq.end - seq.begin + 1;
+					struct accel_3d_t accels[before + frame_len];
+					memcpy(&accels[before], &seq.each[seq.begin], frame_len * sizeof(sample_3d_t));
+					
+					if (before > 0)
+					{
+						memcpy(&accels[0], &seq.each[seq.begin - before], before * sizeof(sample_3d_t));
+					}
+					neo_show_handle_accel_process(accels, before + frame_len);
+				}
+			}
+			else /* case when begin > end */
+			{
+				if (FRAME_LEN - seq.begin + seq.end > FRAME_DIF + FRAME_AFTER)
+				{
+					int before = 0;
+					if (seq.begin - seq.end > FRAME_BEFORE)
+					{
+						before = FRAME_BEFORE;
+					}
+					unsigned int frame_len_end = FRAME_LEN - seq.begin;
+					unsigned int frame_len_begin = seq.end + 1;
+					unsigned int frame_len = frame_len_end + frame_len_begin;
+					struct accel_3d_t accels[before + frame_len];
+					memcpy(&accels[before], &seq.each[seq.begin], frame_len_end * sizeof(sample_3d_t));
+					memcpy(&accels[before + frame_len_end], &seq.each[0], frame_len_begin * sizeof(accel_3d_t));
+					
+					if (before > 0)
+					{
+						memcpy(&accels[0], &seq.each[seq.begin - before], before * sizeof(sample_3d_t));
+					}
+					
+					neo_show_handle_accel_process(accels, before + frame_len); 
+				}
+			}
+		}
+	}
+
+	//printf("%+f\t%+f\t%+f\n", accel.val[0], accel.val[1], accel.val[2]);
+}
+
+static void neo_show_handle_accel_process(struct accel_3d_t accels[], unsigned int accel_len)
+{
+	int i;
+	for (i = 0; i < accel_len; i++)
+	{	
+		if (i % 17 == 0)
+		{
+			printf("%+f\t%+f\t%+f ***\n", prev_val[0] / count, 
+				prev_val[1] / count, prev_val[2] / count);
+			prev_val[0] = accels[i].val[0];
+			prev_val[1] = accels[i].val[1];
+			prev_val[2] = accels[i].val[2];
+			count = 1;
+		} else {
+			prev_val[0] += accels[i].val[0];
+			prev_val[1] += accels[i].val[1];
+			prev_val[2] += accels[i].val[2];
+			count++;
+		}
+		printf("%+f\t%+f\t%+f\n", accels[i].val[0], accels[i].val[1], accels[i].val[2]);
+	}
+	
+	if (count > 0)
+	{
+		printf("*** %+f\t%+f\t%+f ***\n", prev_val[0] / count, 
+			prev_val[1] / count, prev_val[2] / count);
+	}
+		
+	printf("End of detection.\n");
+	fflush(stdout);
 }
 
 /*
@@ -291,8 +415,16 @@ int main(int argc, char **argv)
 		case 's': /* show-accel */
 			if (used_device == dev_wii) {
 				show_accel();
-			} else if (used_device = dev_neo) {
-				
+			} else if (used_device == dev_neo) {
+				seq.index = 0;
+				detected = 0;
+				seq.till_end = FRAME_AFTER;
+	
+				endpoint.prior_prob[0] = 0.4; /* noise */
+				endpoint.prior_prob[1] = 0.6; /* motion */
+				gauss_mix_read_3d(&endpoint.each[0], "/etc/gestures/noise.gauss");	
+				gauss_mix_read_3d(&endpoint.each[1], "/etc/gestures/motion.gauss");
+				neo_show_accel();
 			} else {
 				exit(1);
 			}
@@ -377,7 +509,7 @@ static char parse_options(int argc, char **argv)
 		
 	/* don't display errors to stderr */
 	opterr = 0;
-	while ((long_opt_val = getopt_long(argc, argv, "b:c:d:l:m:n:svh", long_opts, &long_opt_ind)) != -1) 
+	while ((long_opt_val = getopt_long(argc, argv, "wqb:c:d:l:m:n:svh", long_opts, &long_opt_ind)) != -1) 
 	{
 		switch (long_opt_val)
 		{
