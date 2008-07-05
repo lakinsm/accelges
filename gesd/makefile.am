@@ -14,4 +14,5 @@ bin_SCRIPTS = \
 	scripts/demoneo-echo.sh
 
 gesd_LDADD  = -lges -laccelwii -laccelneo -lbluetooth -lm
-gesd_LDFLAGS = -L../lib
+gesd_LDFLAGS = -L$(top_builddir)/accelneo -L$(top_builddir)/accelwii -L$(top_builddir)/ges
+
