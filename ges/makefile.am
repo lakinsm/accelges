@@ -1,7 +1,8 @@
 # (C) 2008 OpenMoko Inc. Paul-Valentin Borza
 
-# needs gnu99 (doesn't work with c99 due to M_E and M_PI from math.h)
-AM_CFLAGS = -Iinclude -Wall -std=gnu99
+AM_CFLAGS = \
+	-Iinclude \
+	${ALL_CFLAGS}
 
 lib_LTLIBRARIES = libges.la
 
@@ -11,3 +12,4 @@ libges_la_SOURCES = \
 	src/ges.c \
 	src/hmm.c \
 	src/model.c
+

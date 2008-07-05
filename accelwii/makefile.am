@@ -1,8 +1,9 @@
 # (C) 2008 OpenMoko Inc. Paul-Valentin Borza
 
-# problem here as it uses the include from arm
-AM_CFLAGS = -Iinclude -I/usr/local/openmoko/arm/include \
-	-Wall -std=gnu99
+AM_CFLAGS = \
+	-Iinclude \
+	-I/usr/local/openmoko/arm/include \
+	${ALL_CFLAGS}
 
 lib_LTLIBRARIES = libaccelwii.la
 
