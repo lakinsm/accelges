@@ -1,7 +1,12 @@
 # (C) 2008 OpenMoko Inc. Paul-Valentin Borza
 
-AM_CFLAGS = -Iinclude -I/usr/local/openmoko/arm/include -I../ges/include -I../accelwii/include -I../accelneo/include \
-	-Wall -std=gnu99
+AM_CFLAGS = \
+	-Iinclude \
+	-I${top_srcdir}/accelneo/include \
+	-I${top_srcdir}/accelwii/include \
+	-I${top_srcdir}/ges/include \
+	-I/usr/local/openmoko/arm/include \
+	${ALL_CFLAGS}
 
 bin_PROGRAMS = gesd
 
@@ -13,6 +18,15 @@ bin_SCRIPTS = \
 	scripts/demoneo.sh \
 	scripts/demoneo-echo.sh
 
-gesd_LDADD  = -lges -laccelwii -laccelneo -lbluetooth -lm
-gesd_LDFLAGS = -L$(top_builddir)/accelneo -L$(top_builddir)/accelwii -L$(top_builddir)/ges
+gesd_LDADD  = \
+	-laccelneo \
+	-laccelwii \
+	-lges \
+	-lbluetooth \
+	-lm
+
+gesd_LDFLAGS = \
+	-L$(top_builddir)/accelneo \
+	-L$(top_builddir)/accelwii \
+	-L$(top_builddir)/ges
 
