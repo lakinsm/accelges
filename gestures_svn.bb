@@ -11,3 +11,8 @@ S = "${WORKDIR}/gestures"
 
 inherit autotools
 
+do_install_append() {
+	install -d ${D}${sysconfdir}/gestures/
+	install -c -D -m 644 ${S}/config/* ${D}${sysconfdir}/gestures/
+}
+
