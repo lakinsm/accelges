@@ -49,7 +49,7 @@ void neo_begin_read(struct neo_t *neo)
 	accel.val[0] = 0.0;
 	accel.val[1] = 0.0;
 	accel.val[2] = 0.0;
-	unsigned int p = 0;
+	unsigned short int p = 0;
 	
 	while (1)
 	{
@@ -79,13 +79,16 @@ void neo_begin_read(struct neo_t *neo)
 			
 			/* save to accel on the axis */
 			accel.val[axis] = val_g;
-			p++;
-			p %= 3;
-			if (p == 0) /* received 3 values, order doesn't matter */
-			{
-				neo->handle_accel(accel);
-			}
+			//p++;
+			//p %= 3;
+			//if (p == 0) /* received 3 values, order doesn't matter */
+			//{
+			//	neo->handle_accel(accel);
+			//}
 			//printf("%d: %f\n", axis, val_g);
+		} else if (rel == 0) /* sends a rel 0 after each 3 reports on X, Y, and Z */
+		{
+			neo->handle_accel(accel);
 		}
 	}
 }
