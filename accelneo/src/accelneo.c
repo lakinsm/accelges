@@ -29,7 +29,7 @@ unsigned char neo_open(struct neo_t *neo)
 {
 	/* use top accelerometer (event2) */
 	/* use bottom accelerometer (event3) */
-	neo->in_desc = open("/dev/input/event3", O_RDONLY);
+	neo->in_desc = open("/dev/input/event2", O_RDONLY);
 	if (neo->in_desc < 0)
 	{	return 0;	}
 	else
