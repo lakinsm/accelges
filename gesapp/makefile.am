@@ -10,5 +10,6 @@ gesapp_SOURCES = \
 
 #bin_SCRIPTS =
 
-gesapp_LDADD  = -lges -laccelwii -laccelneo -lbluetooth -lm
-gesapp_LDFLAGS = -L../lib
+gesapp_LDADD  = -laccelneo -laccelwii -lges -lbluetooth -lm
+gesapp_LDFLAGS = -L$(top_builddir)/accelneo -L$(top_builddir)/accelwii -L$(top_builddir)/ges
+
