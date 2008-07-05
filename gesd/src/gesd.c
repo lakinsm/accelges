@@ -269,7 +269,7 @@ static void handle_signal(int signal)
 }
 
 /*
- * catches the termination signal and disposes the Wii
+ * catches the termination signal and disposes the Neo
  */
 static void neo_handle_signal(int signal)
 {
@@ -288,4 +288,3 @@ static void neo_handle_signal(int signal)
 			break;
 	}
 }
-
