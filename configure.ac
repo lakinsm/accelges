@@ -32,4 +32,5 @@ accelwii/makefile
 ges/makefile
 gesapp/makefile
 gesd/makefile
+gesm/makefile
 ])

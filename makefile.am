@@ -3,5 +3,6 @@ SUBDIRS = \
 	accelwii \
 	ges \
 	gesapp \
-	gesd
+	gesd \
+	gesm
 
