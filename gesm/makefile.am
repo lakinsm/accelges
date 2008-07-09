@@ -1,0 +1,30 @@
+# (C) 2008 OpenMoko Inc. Paul-Valentin Borza
+
+AM_CFLAGS = \
+	-Iinclude \
+	-I${top_srcdir}/accelneo/include \
+	-I${top_srcdir}/accelwii/include \
+	-I${top_srcdir}/ges/include \
+	-I/usr/local/openmoko/arm/include \
+	`pkg-config --cflags gtk+-2.0` \
+	${ALL_CFLAGS}
+
+bin_PROGRAMS = gesm
+
+gesm_SOURCES = \
+	src/gesm.c
+
+#bin_SCRIPTS =
+
+gesm_LDADD  = \
+	-laccelneo \
+	-laccelwii \
+	-lges \
+	-lbluetooth \
+	-lm
+
+gesm_LDFLAGS = \
+	-L$(top_builddir)/accelneo \
+	-L$(top_builddir)/accelwii \
+	-L$(top_builddir)/ges \
+	`pkg-config --libs gtk+-2.0`
