@@ -18,156 +18,129 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
+#include <dirent.h>
+#include <getopt.h>
 #include <gtk/gtk.h>
+#include <string.h>
+
+#define VERSION "0.1"
 
 enum
 {
 	COLUMN_NAME = 0,
 	COLUMN_STATUS,
-	N_COLUMNS
+	COLUMN_LEN
 };
 
 static void add_to_list(GtkWidget *list, const gchar *str)
 {
-  GtkListStore *store;
-  GtkTreeIter iter;
-
-  store = GTK_LIST_STORE(gtk_tree_view_get_model
-      (GTK_TREE_VIEW(list)));
-
-  gtk_list_store_append(store, &iter);
-  gtk_list_store_set(store, &iter, COLUMN_NAME, str, COLUMN_STATUS, "Trained", -1);
-}
-
-static void init_menubar(GtkWidget *box)
-{
-	GtkWidget *menubar;
-	GtkWidget *filemenu;
-	GtkWidget *file;
-	GtkWidget *new;
-	GtkWidget *train;
-	GtkWidget *restore;
-	GtkWidget *sep;
-	GtkWidget *properties;
-	GtkWidget *sep2;
-	GtkWidget *quit;
-	GtkWidget *viewmenu;
-	GtkWidget *view;
-	GtkWidget *classes;
-	GtkWidget *models;
-	GtkWidget *helpmenu;
-	GtkWidget *help;
-	GtkWidget *about;
-
-	menubar = gtk_menu_bar_new();
-	filemenu = gtk_menu_new();
-	viewmenu = gtk_menu_new();
-	helpmenu = gtk_menu_new();
-	
-	file = gtk_menu_item_new_with_label("File");
-	new = gtk_menu_item_new_with_label("New...");
-	train = gtk_menu_item_new_with_label("Train...");
-	restore = gtk_menu_item_new_with_label("Restore Defaults");
-	sep = gtk_separator_menu_item_new();
-	properties = gtk_menu_item_new_with_label("Properties");
-	sep2 = gtk_separator_menu_item_new();
-	quit = gtk_menu_item_new_with_label("Quit");
-	view = gtk_menu_item_new_with_label("View");
-	classes = gtk_menu_item_new_with_label("Classes");
-	models = gtk_menu_item_new_with_label("Models");
-	help = gtk_menu_item_new_with_label("Help");
-	about = gtk_menu_item_new_with_label("About...");
-	
-	gtk_menu_item_set_submenu(GTK_MENU_ITEM(file), filemenu);
-	gtk_menu_shell_append(GTK_MENU_SHELL(filemenu), new);
-	gtk_menu_shell_append(GTK_MENU_SHELL(filemenu), train);
-	gtk_menu_shell_append(GTK_MENU_SHELL(filemenu), restore);
-	gtk_menu_shell_append(GTK_MENU_SHELL(filemenu), sep);
-	gtk_menu_shell_append(GTK_MENU_SHELL(filemenu), properties);
-	gtk_menu_shell_append(GTK_MENU_SHELL(filemenu), sep2);
-	gtk_menu_shell_append(GTK_MENU_SHELL(filemenu), quit);
-	gtk_menu_shell_append(GTK_MENU_SHELL(menubar), file);
-	
-	gtk_menu_item_set_submenu(GTK_MENU_ITEM(view), viewmenu);
-	gtk_menu_shell_append(GTK_MENU_SHELL(viewmenu), classes);
-	gtk_menu_shell_append(GTK_MENU_SHELL(viewmenu), models);
-	gtk_menu_shell_append(GTK_MENU_SHELL(menubar), view);
-	
-	gtk_menu_item_set_submenu(GTK_MENU_ITEM(help), helpmenu);
-	gtk_menu_shell_append(GTK_MENU_SHELL(helpmenu), about);
-	gtk_menu_shell_append(GTK_MENU_SHELL(menubar), help);
-	
-	gtk_box_pack_start(GTK_BOX(box), menubar, FALSE, FALSE, 3);	
-}
-
-static void init_list(GtkWidget *box)
-{
-	GtkWidget *list;
-	
-	GtkCellRenderer *renderer;
-	GtkTreeViewColumn *column;
 	GtkListStore *store;
+	GtkTreeIter iter;
 
-	list = gtk_tree_view_new();
-	gtk_tree_view_set_headers_visible(GTK_TREE_VIEW(list), TRUE);
+	store = GTK_LIST_STORE(gtk_tree_view_get_model
+		(GTK_TREE_VIEW(list)));
 
-	renderer = gtk_cell_renderer_text_new();
-	column = gtk_tree_view_column_new_with_attributes("Name",
-		renderer, "text", COLUMN_NAME, NULL);
-	gtk_tree_view_append_column(GTK_TREE_VIEW(list), column);
-	
-	renderer = gtk_cell_renderer_text_new();
-	column = gtk_tree_view_column_new_with_attributes("Status",
-		renderer, "text", COLUMN_STATUS, NULL);
-	gtk_tree_view_append_column(GTK_TREE_VIEW(list), column);
-	
-	store = gtk_list_store_new(N_COLUMNS, G_TYPE_STRING, G_TYPE_STRING);
-	gtk_tree_view_set_model(GTK_TREE_VIEW(list), GTK_TREE_MODEL(store));
-
-	g_object_unref(store);
-	
-	gtk_box_pack_start(GTK_BOX(box), list, TRUE, TRUE, 5);
-	
-	  add_to_list(list, "Aliens");
-  add_to_list(list, "Leon");
-  add_to_list(list, "Capote");
-  add_to_list(list, "Saving private Ryan");
-  add_to_list(list, "Der Untergang");
-	
+	gtk_list_store_append(store, &iter);
+	gtk_list_store_set(store, &iter, COLUMN_NAME, str, COLUMN_STATUS, "Trained", -1);
 }
 
-static void init_toolbar(GtkWidget *box)
+static int filter_model(struct dirent *entry)
 {
-	GtkWidget *toolbar;
-	GtkToolItem *new;
-	GtkToolItem *train;
-	GtkToolItem *view;
-	
-	toolbar = gtk_toolbar_new();
-	gtk_toolbar_set_style(GTK_TOOLBAR(toolbar), GTK_TOOLBAR_TEXT);
-	
-	new = gtk_tool_button_new(NULL, "New");
-	gtk_toolbar_insert(GTK_TOOLBAR(toolbar), new, -1);
-	train = gtk_tool_button_new(NULL, "Train");
-	gtk_toolbar_insert(GTK_TOOLBAR(toolbar), train, -1);
-	view = gtk_tool_button_new(NULL, "View");
-	gtk_toolbar_insert(GTK_TOOLBAR(toolbar), view, -1);
-	
-	gtk_box_pack_start(GTK_BOX(box), toolbar, FALSE, FALSE, 4);
+	char *p = rindex(entry->d_name, '.');
+	return ((p) && (strcmp(p, ".hmm") == 0));
 }
+
+static void refresh_list(GtkWidget *list, char *dir)
+{
+	struct dirent **names;
+	int names_len;
+	
+	names_len = scandir(dir, &names, filter_model, alphasort);
+	if (names_len < 0)
+	{
+		perror("scandir");
+	}
+	else
+	{
+		while (names_len--)
+		{
+			//printf("%s\n", names[names_len]->d_name);
+			add_to_list(list, names[names_len]->d_name);
+			free(names[names_len]);
+		}
+		free(names);
+	}
+}
+
+static void print_version(void);
+
+static void print_usage(char *file_name);
 
 /* graphical user interface */
-static void main_ui(int argc, char *argv[]);
+static void main_ui(int argc, char *argv[], char *dir);
 
 int main(int argc, char *argv[])
 {
-	main_ui(argc, argv);
-		
+	char dir[1024];
+	
+	int long_opt_ind = 0;
+	int long_opt_val = 0;
+	
+	static struct option long_opts[] = {
+		{ "dir", required_argument, 0, 'd' },
+		{ "version", no_argument, 0, 'v' },
+		{ "help", no_argument, 0, 'h' },
+		{ 0, 0, 0, 0 }
+	};
+
+	dir[0] = '\0';	
+	opterr = 0;
+	while ((long_opt_val = getopt_long(argc, argv, "d:vh", long_opts, &long_opt_ind)) != -1) 
+	{
+		switch (long_opt_val)
+		{
+			case 'd':
+				strncpy(dir, optarg, sizeof(dir));
+				dir[sizeof(dir) / sizeof(dir[0]) - 1] = '\0';
+				break;
+			case 'v':
+				print_version();
+				
+				exit(0);
+				break;
+			case 'h':
+			case '?':
+				print_usage(argv[0]);
+				
+				exit(0);
+				break;
+		}
+	}
+
+	if (dir[0] == '\0')
+	{
+		print_usage(argv[0]);
+		exit(1);
+	}
+	
+	/* should be ok here */
+	main_ui(argc, argv, dir);
+
 	return 0;	
 }
 
+static void print_version(void)
+{
+	printf("Version: %s\n", VERSION);
+}
+
+static void print_usage(char *file_name)
+{
+	printf("Usage: %s --dir <dir> | --version | --help\n", file_name);
+}
+
 /* graphical user interface */
-static void main_ui(int argc, char *argv[])
+static void main_ui(int argc, char *argv[], char *dir)
 {
 	/* declarations */
 	GtkWidget *window;
@@ -211,7 +184,7 @@ static void main_ui(int argc, char *argv[])
 	gtk_tree_view_set_headers_visible(GTK_TREE_VIEW(list), TRUE);
 
 	renderer = gtk_cell_renderer_text_new();
-	column = gtk_tree_view_column_new_with_attributes("Name",
+	column = gtk_tree_view_column_new_with_attributes("Gesture Name",
 		renderer, "text", COLUMN_NAME, NULL);
 	gtk_tree_view_append_column(GTK_TREE_VIEW(list), column);
 	
@@ -220,19 +193,15 @@ static void main_ui(int argc, char *argv[])
 		renderer, "text", COLUMN_STATUS, NULL);
 	gtk_tree_view_append_column(GTK_TREE_VIEW(list), column);
 	
-	store = gtk_list_store_new(N_COLUMNS, G_TYPE_STRING, G_TYPE_STRING);
+	store = gtk_list_store_new(COLUMN_LEN, G_TYPE_STRING, G_TYPE_STRING);
 	gtk_tree_view_set_model(GTK_TREE_VIEW(list), GTK_TREE_MODEL(store));
 
 	g_object_unref(store);
 	
 	gtk_box_pack_start(GTK_BOX(vbox), list, TRUE, TRUE, 5);
 	
-	add_to_list(list, "Aliens");
-	add_to_list(list, "Leon");
-	add_to_list(list, "Capote");
-	add_to_list(list, "Saving private Ryan");
-	add_to_list(list, "Der Untergang");
-
+	refresh_list(list, dir);
+	
 	/* events */
 	g_signal_connect_swapped(G_OBJECT(window), "destroy",
 		G_CALLBACK(gtk_main_quit), NULL);

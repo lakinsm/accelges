@@ -1,0 +1,1 @@
+gesm -d /etc/gestures

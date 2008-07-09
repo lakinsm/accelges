@@ -14,7 +14,8 @@ bin_PROGRAMS = gesm
 gesm_SOURCES = \
 	src/gesm.c
 
-#bin_SCRIPTS =
+bin_SCRIPTS = \
+	scripts/gesm-neo.sh
 
 gesm_LDADD  = \
 	-laccelneo \
