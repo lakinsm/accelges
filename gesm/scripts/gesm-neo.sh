@@ -1,1 +1,1 @@
-gesm -d /etc/gestures
+gesm --neo --dir /etc/gestures --accel

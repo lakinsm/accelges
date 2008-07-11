@@ -12,7 +12,8 @@ AM_CFLAGS = \
 bin_PROGRAMS = gesm
 
 gesm_SOURCES = \
-	src/gesm.c
+	src/gesm.c \
+	src/gui.c
 
 bin_SCRIPTS = \
 	scripts/gesm-neo.sh

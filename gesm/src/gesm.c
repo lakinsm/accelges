@@ -18,198 +18,399 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#include <dirent.h>
+#include <ctype.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <getopt.h>
-#include <gtk/gtk.h>
+#include <signal.h>
 #include <string.h>
+#include <unistd.h>
+
+#include "accelneo.h"
+#include "accelwii.h"
+#include "ges.h"
+#include "gesm.h"
+#include "gui.h"
 
 #define VERSION "0.1"
 
-enum
-{
-	COLUMN_NAME = 0,
-	COLUMN_STATUS,
-	COLUMN_LEN
-};
+static struct neo_t neo;
+static struct wii_t wii;
+static struct seq_3d_t seq;
+static unsigned char is_pressed;
 
-static void add_to_list(GtkWidget *list, const gchar *str)
-{
-	GtkListStore *store;
-	GtkTreeIter iter;
+struct gauss_mix_3d_t gauss_mix;
+struct gauss_mix_3d_t gauss_mix_est;
 
-	store = GTK_LIST_STORE(gtk_tree_view_get_model
-		(GTK_TREE_VIEW(list)));
+static char file[1024];
 
-	gtk_list_store_append(store, &iter);
-	gtk_list_store_set(store, &iter, COLUMN_NAME, str, COLUMN_STATUS, "Trained", -1);
-}
-
-static int filter_model(struct dirent *entry)
-{
-	char *p = rindex(entry->d_name, '.');
-	return ((p) && (strcmp(p, ".hmm") == 0));
-}
-
-static void refresh_list(GtkWidget *list, char *dir)
-{
-	struct dirent **names;
-	int names_len;
-	
-	names_len = scandir(dir, &names, filter_model, alphasort);
-	if (names_len < 0)
-	{
-		perror("scandir");
-	}
-	else
-	{
-		while (names_len--)
-		{
-			//printf("%s\n", names[names_len]->d_name);
-			add_to_list(list, names[names_len]->d_name);
-			free(names[names_len]);
-		}
-		free(names);
-	}
-}
-
+/* */
+static void print_header(void);
+/* */
 static void print_version(void);
+/* */
+static void print_usage(void);
+/* */
+static void wii_signal_cb(int signal);
+/* */
+static void neo_signal_cb(int signal);
+/* */
+void cmd_accel_cb(unsigned char pressed, struct accel_3d_t accel);
+/* */
+void cmd_new_class_cb(unsigned char pressed, struct accel_3d_t accel);
+/* */
+void cmd_new_model_cb(unsigned char pressed, struct accel_3d_t accel);
 
-static void print_usage(char *file_name);
-
-/* graphical user interface */
-static void main_ui(int argc, char *argv[], char *dir);
-
+/*
+ * 
+ */
 int main(int argc, char *argv[])
 {
+	enum device dev = dev_none;
+	char cmd = '_';
 	char dir[1024];
+	char *p;
 	
 	int long_opt_ind = 0;
 	int long_opt_val = 0;
 	
 	static struct option long_opts[] = {
+		{ "wii1", no_argument, 0, 'w' },
+		{ "neo2", no_argument, 0, 'q' },
+		{ "neo3", no_argument, 0, 'z' },
 		{ "dir", required_argument, 0, 'd' },
+		{ "gui", no_argument, 0, 'g' },
+		{ "accel", no_argument, 0, 'a' },
+		{ "new", required_argument, 0, 'n' },
+		{ "view", required_argument, 0, 'o' },
+		{ "train", required_argument, 0, 'e' },
 		{ "version", no_argument, 0, 'v' },
 		{ "help", no_argument, 0, 'h' },
 		{ 0, 0, 0, 0 }
 	};
 
-	dir[0] = '\0';	
+	print_header();
+	
+	dir[0] = '\0';
+	file[0] = '\0';
 	opterr = 0;
-	while ((long_opt_val = getopt_long(argc, argv, "d:vh", long_opts, &long_opt_ind)) != -1) 
+	while ((long_opt_val = getopt_long(argc, argv, "wqzd:gan:o:e:vh", long_opts, &long_opt_ind)) != -1) 
 	{
 		switch (long_opt_val)
 		{
-			case 'd':
+			case 'w': /* --wii1 */
+				dev = (dev == dev_none) ? dev_wii1 : dev;
+				break;
+			case 'q': /* --neo2 */
+				dev = (dev == dev_none) ? dev_neo2 : dev;
+				break;
+			case 'z': /* --neo3 */
+				dev = (dev == dev_none) ? dev_neo3 : dev;
+				break;
+			case 'd': /* --dir */
 				strncpy(dir, optarg, sizeof(dir));
 				dir[sizeof(dir) / sizeof(dir[0]) - 1] = '\0';
 				break;
-			case 'v':
+			case 'n': /* --new */
+			case 'o': /* --view */
+			case 'e': /* --train */
+				strncpy(file, optarg, sizeof(file));
+				file[sizeof(file) / sizeof(file[0]) - 1] = '\0';
+			case 'g': /* --gui */
+			case 'a': /* --accel */
+				cmd = long_opt_val;
+				break;
+			case 'v': /* --version */
 				print_version();
 				
 				exit(0);
 				break;
-			case 'h':
+			case 'h': /* --help */
 			case '?':
-				print_usage(argv[0]);
+				print_usage();
 				
 				exit(0);
 				break;
 		}
 	}
-
-	if (dir[0] == '\0')
+	
+	/* minimum requirements */
+	if ((dev == dev_none) || (dir[0] == '\0') || (cmd == '_'))
 	{
-		print_usage(argv[0]);
+		print_usage();
 		exit(1);
 	}
-	
 	/* should be ok here */
-	main_ui(argc, argv, dir);
+	
+	/* device handshake */
+	switch (dev)
+	{
+		case dev_wii1: /* --wii1 */
+			printf("Searching... (Press 1 and 2 on the Wii)\n");
+			if (wii_search(&wii, 5) < 0)
+			{
+				fprintf(stderr, "Could not find the Wii.\n");
+				exit(1);
+			}
+			printf("Found.\n");
+	
+			if (wii_connect(&wii) < 0)
+			{
+				fprintf(stderr, "Could not connect to the Wii.\n");
+				exit(1);
+			}
+			printf("Connected.\n");
+			wii_set_leds(&wii, 0, 0, 0, 1);
+			
+			signal(SIGINT, wii_signal_cb);
+			signal(SIGTERM, wii_signal_cb);
+			break;
+		case dev_neo2: /* --neo2 */
+			if (neo_open(&neo, neo_accel2)) {
+				fprintf(stderr, "Could not open top accelerometer.\n");
+				exit(1);
+			}
+			printf("Opened.\n");
+			
+			signal(SIGINT, neo_signal_cb);
+			signal(SIGTERM, neo_signal_cb);
+			break;
+		case dev_neo3: /* --neo3 */
+			if (neo_open(&neo, neo_accel3)) {
+				fprintf(stderr, "Could not open bottom accelerometer.\n");
+				exit(1);
+			}
+			printf("Opened.\n");
+			
+			signal(SIGINT, neo_signal_cb);
+			signal(SIGTERM, neo_signal_cb);
+			break;
+		case dev_none:
+			exit(1);
+			break;
+	}
+	
+	chdir(dir);
+	p = rindex(file, '.');
+	switch (cmd)
+	{
+		case 'g': /* --gui */
+			main_gui(argc, argv, dir);
+			break;
+		case 'a': /* --accel */
+			wii.handle_recv = cmd_accel_cb;
+			neo.handle_recv = cmd_accel_cb;
+			break;
+		case 'n': /* --new */
+			if ((p) && (strcmp(p, ".class") == 0)) { /* class */
+				wii.handle_recv = cmd_new_class_cb;
+				neo.handle_recv = cmd_new_class_cb;
+			} else if ((p) && (strcmp(p, ".model") ==0)) { /* model */
+				wii.handle_recv = cmd_new_model_cb;
+				neo.handle_recv = cmd_new_model_cb;
+			} else { /* unknown */
+				fprintf(stderr, "Unrecognized file extension (has to be .class or .model).\n");
+				exit(1);
+			}
+			
+			break;
+		case 'o': /* --view */
+			break;
+		case 'e': /* --train */
+			break;
+	}
 
+	switch (dev)
+	{
+		case dev_wii1:
+			wii_talk(&wii);
+			break;
+		case dev_neo2:
+		case dev_neo3:
+			neo_begin_read(&neo);
+			break;
+		case dev_none:
+			exit(1);
+			break;
+	}
+	
 	return 0;	
 }
 
+/*
+ * 
+ */
+static void print_header(void)
+{
+	printf("gesm: (C) 2008 OpenMoko Inc. Paul-Valentin Borza www.borza.ro\n"
+		"This program is free software under the terms of the GNU General Public License.\n\n");
+}
+
+/*
+ * 
+ */
 static void print_version(void)
 {
 	printf("Version: %s\n", VERSION);
 }
 
-static void print_usage(char *file_name)
-{
-	printf("Usage: %s --dir <dir> | --version | --help\n", file_name);
+/*
+ * 
+ */
+static void print_usage(void)
+{	
+	printf("Usage: gesm --wii1 --dir DIRECTORY COMMAND\n"
+		"   or: gesm --neo2 --dir DIRECTORY COMMAND\n"
+		"   or: gesm --neo3 --dir DIRECTORY COMMAND\n"
+		"   or: gesm --version\n"
+		"   or: gesm --help\n"
+		"Commands:\n"
+		"   --gui       \tshows a graphical user interface\n"
+		"   --accel     \tshows recorded acceleration values\n"
+		"   --new   FILE\tcreates a new class (.class) or model (.model)\n"
+		"   --view  FILE\tvisualizes a class (.class) or model (.model)\n"
+		"   --train FILE\ttrains a class (.class) or model (.model)\n"
+		"Remarks:\n"
+		"   neo2 refers to the top accelerometer, and\n"
+		"   neo3 refers to the bottom accelerometer;\n");
 }
 
-/* graphical user interface */
-static void main_ui(int argc, char *argv[], char *dir)
+/*
+ * 
+ */
+static void wii_signal_cb(int signal)
 {
-	/* declarations */
-	GtkWidget *window;
-	GtkWidget *vbox;
+	switch (signal)
+	{
+		case SIGINT:
+		case SIGTERM:
+			wii_set_leds(&wii, 1, 0, 0, 0);
+			wii_disconnect(&wii);			
+			printf("Disconnected.\n");
+			
+			fflush(stdout);
+			fflush(stderr);
+			exit(0);
+			break;
+		default:
+			break;
+	}
+}
+
+/*
+ * 
+ */
+static void neo_signal_cb(int signal)
+{
+	switch (signal)
+	{
+		case SIGINT:
+		case SIGTERM:
+			neo_close(&neo);
+			printf("Closed.\n");
+
+			fflush(stdout);
+			fflush(stderr);
+			exit(0);
+			break;
+		default:
+			break;
+	}
+}
+
+/*
+ * 
+ */
+void cmd_accel_cb(unsigned char pressed, struct accel_3d_t accel)
+{
+	if (pressed)
+	{
+		printf("%+f\t%+f\t%+f\n", accel.val[0], accel.val[1], accel.val[2]);
+	}	
+}
+
+/*
+ * 
+ */
+void cmd_new_class_cb(unsigned char pressed, struct accel_3d_t accel)
+{
+	if (pressed) {
+		is_pressed = 1;
+	}
 	
-	GtkWidget *toolbar;
-	GtkToolItem *new;
-	GtkToolItem *train;
-	GtkToolItem *view;
-	
-	GtkWidget *list;
-	GtkCellRenderer *renderer;
-	GtkTreeViewColumn *column;
-	GtkListStore *store;
+	if ((pressed) && (is_pressed)) {
+		seq.each[seq.index++] = accel;
+		printf("%+f\t%+f\t%+f\n", accel.val[0], accel.val[1], accel.val[2]);
+	}
+	else if ((!pressed) && (is_pressed))
+	{
+		unsigned int feature_len = seq.index - 2;
+		struct sample_3d_t feature[feature_len];
+		struct sample_3d_t sum;
+		sum.val[0] = 0.0;
+		sum.val[1] = 0.0;
+		sum.val[2] = 0.0;
 		
-	/* initialization */
-	gtk_init(&argc, &argv);
-	
-	/* objects */
-	window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-	gtk_window_set_title(GTK_WINDOW(window), "Gestures Manager");
-	
-	vbox = gtk_vbox_new(FALSE, 0);
-	gtk_container_add(GTK_CONTAINER(window), vbox);
-
-	/* toolbar */
-	toolbar = gtk_toolbar_new();
-	gtk_toolbar_set_style(GTK_TOOLBAR(toolbar), GTK_TOOLBAR_TEXT);
-	
-	new = gtk_tool_button_new(NULL, "New");
-	gtk_toolbar_insert(GTK_TOOLBAR(toolbar), new, -1);
-	train = gtk_tool_button_new(NULL, "Train");
-	gtk_toolbar_insert(GTK_TOOLBAR(toolbar), train, -1);
-	view = gtk_tool_button_new(NULL, "View");
-	gtk_toolbar_insert(GTK_TOOLBAR(toolbar), view, -1);
-	
-	gtk_box_pack_start(GTK_BOX(vbox), toolbar, FALSE, FALSE, 4);
-	
-	/* list */
-	list = gtk_tree_view_new();
-	gtk_tree_view_set_headers_visible(GTK_TREE_VIEW(list), TRUE);
-
-	renderer = gtk_cell_renderer_text_new();
-	column = gtk_tree_view_column_new_with_attributes("Gesture Name",
-		renderer, "text", COLUMN_NAME, NULL);
-	gtk_tree_view_append_column(GTK_TREE_VIEW(list), column);
-	
-	renderer = gtk_cell_renderer_text_new();
-	column = gtk_tree_view_column_new_with_attributes("Status",
-		renderer, "text", COLUMN_STATUS, NULL);
-	gtk_tree_view_append_column(GTK_TREE_VIEW(list), column);
-	
-	store = gtk_list_store_new(COLUMN_LEN, G_TYPE_STRING, G_TYPE_STRING);
-	gtk_tree_view_set_model(GTK_TREE_VIEW(list), GTK_TREE_MODEL(store));
-
-	g_object_unref(store);
-	
-	gtk_box_pack_start(GTK_BOX(vbox), list, TRUE, TRUE, 5);
-	
-	refresh_list(list, dir);
-	
-	/* events */
-	g_signal_connect_swapped(G_OBJECT(window), "destroy",
-		G_CALLBACK(gtk_main_quit), NULL);
-
-	//g_signal_connect(G_OBJECT(quit), "activate",
-	//	G_CALLBACK(gtk_main_quit), NULL);
- 
-	gtk_widget_show_all(window);
-	
-	gtk_main();
+		/* compute the feature vector for each frame */
+		printf("Features:\n");
+		int i;
+		for (i = 1; i < seq.index - 1; i++) {
+			ges_fea_3d(&seq, i, i - 1, &feature[i - 1]);
+			sum.val[0] += feature[i - 1].val[0];
+			sum.val[1] += feature[i - 1].val[1];
+			sum.val[2] += feature[i - 1].val[2];
+			printf("%+f\t%+f\t%+f\n", feature[i - 1].val[0], feature[i - 1].val[1], feature[i - 1].val[2]);
+		}
+		
+		/***
+		 * NEW CLASS
+		 ***/
+		/* one mixture */
+		gauss_mix_create_3d(&gauss_mix, 1);
+		gauss_mix_rand_3d(&gauss_mix);
+		gauss_mix.each[0].mean[0] = sum.val[0] / feature_len;
+		gauss_mix.each[0].mean[1] = sum.val[1] / feature_len;
+		gauss_mix.each[0].mean[2] = sum.val[2] / feature_len;
+		gauss_mix_print_3d(&gauss_mix);
+		/* check whether we want to commit changes */
+		char response;
+		printf("Make changes and save file? (Y/N)\n");
+		do {
+			response = getchar();
+			response = toupper(response);
+			/* clean the rest of the input */
+			while (getchar() != '\n')
+				;
+		} while ((response != 'Y') && (response != 'N'));
+		/* do selection */
+		if (response == 'Y') {
+			gauss_mix_write_3d(&gauss_mix, file);
+			printf("Saved changes to file.\n");
+			
+			/* don't forget to clean up */
+			gauss_mix_delete_3d(&gauss_mix);
+			
+			/* we're done */
+			kill(getpid(), SIGTERM);
+		} else if (response == 'N') {
+			printf("Discarded changes.\n");
+		}
+		gauss_mix_delete_3d(&gauss_mix);
+		
+		/* reset counter */
+		seq.index = 0;
+		is_pressed = 0;
+	}
 }
+
+/*
+ * 
+ */
+void cmd_new_model_cb(unsigned char pressed, struct accel_3d_t accel)
+{
+	if (pressed)
+	{
+		printf("%+f\t%+f\t%+f\n", accel.val[0], accel.val[1], accel.val[2]);
+	}	
+}
+
