@@ -27,19 +27,33 @@
 typedef struct accel_3d_t {
 	float val[3];
 } accel_3d_t;
+
 #endif
 
-typedef void (* simple_handle_accel_3d_t)(struct accel_3d_t accel);
+#ifndef HANDLE_ACCEL_T
+#define HANDLE_ACCEL_T
+/* handle for acceleration */
+typedef void (* handle_recv_3d_t)(unsigned char pressed, struct accel_3d_t accel);
+
+#endif
+
+typedef enum neo_accel {
+	neo_accel2 = 2,
+	neo_accel3 = 3
+} neo_accel;
 
 typedef struct neo_t {
-	int in_desc;
-	simple_handle_accel_3d_t handle_accel;
+	int accel_desc;
+	int screen_desc;
+	/* callback for acceleration */
+	handle_recv_3d_t handle_recv;
 } neo_t;
 
-unsigned char neo_open(struct neo_t *neo);
-
+/* opens one accelerometer and the touchscreen */
+unsigned char neo_open(struct neo_t *neo, enum neo_accel w_accel);
+/* closes the accelerometer and the touchscreen */
 void neo_close(struct neo_t *neo);
-
+/* begins reading the accelerometer and the touchscreen */
 void neo_begin_read(struct neo_t *neo);
 
 #endif /*ACCELNEO_H_*/

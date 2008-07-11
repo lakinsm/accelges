@@ -21,39 +21,61 @@
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/select.h>
 #include <unistd.h>
 
 #include "accelneo.h"
 
-unsigned char neo_open(struct neo_t *neo)
+/*
+ * opens one accelerometer and the touchscreen
+ */
+unsigned char neo_open(struct neo_t *neo, enum neo_accel w_accel)
 {
-	/* use top accelerometer (event2) */
-	/* use bottom accelerometer (event3) */
-	neo->in_desc = open("/dev/input/event2", O_RDONLY);
-	if (neo->in_desc < 0)
-	{	return 0;	}
-	else
-	{	return 1;	}
+	/* open one of the two accelerometers (top or bottom) */
+	if (w_accel == neo_accel2) {
+		neo->accel_desc = open("/dev/input/event2", O_RDONLY);
+	} else if (w_accel == neo_accel3) {
+		neo->accel_desc = open("/dev/input/event3", O_RDONLY);
+	} else {
+		neo->accel_desc = -1;
+	}
+	
+	/* use screen (event1) */
+	neo->screen_desc = open("/dev/input/event1", O_RDONLY | O_NONBLOCK);
+	
+	if ((neo->accel_desc < 0) || (neo->screen_desc < 0)) {
+		return 0;
+	} else {
+		return 1;
+	}
 }
 
+/*
+ * closes the accelerometer and the touchscreen
+ */
 void neo_close(struct neo_t *neo)
 {
-	close(neo->in_desc);
+	close(neo->accel_desc);
+	close(neo->screen_desc);
 }
 
+/*
+ * begins reading the accelerometer and the touchscreen
+ */
 void neo_begin_read(struct neo_t *neo)
 {
 	const unsigned int report_len = 16;
 	unsigned char report[report_len];
+	unsigned char pressed = 0;
 	struct accel_3d_t accel;
 	accel.val[0] = 0.0;
 	accel.val[1] = 0.0;
 	accel.val[2] = 0.0;
-	unsigned short int p = 0;
 	
 	while (1)
 	{
-		int read_len = read(neo->in_desc, report, report_len);
+		int read_len = read(neo->accel_desc, report, report_len);
+		/* this was a blocking read */
 		if (read_len < 0)
 		{
 			perror("read");
@@ -61,34 +83,34 @@ void neo_begin_read(struct neo_t *neo)
 		}
 		
 		unsigned short int rel = *(unsigned short int *)(report + 8);
-		/* it sends 3 reports with X, Y, and Z with rel = 2
+		/* 
+		 * Neo sends three reports on X, Y, and Z with rel = 2
 		 * and another one (as a separator) with rel = 0 
 		 */
 		if (rel == 2)
 		{
-			//printf("read %d bytes\n", read_len);
-			/* 1 is X
-			 * 2 is Y
-			 * 3 is Z
-			 */
-			unsigned short int axis = *(short int *)(report + 10);
+			unsigned short int axis_ind = *(short int *)(report + 10);
 			/* receives signed acceleration in milli-G */
 			int val_mg = *(int *)(report + 12);
 			/* convert acceleration to G */
 			float val_g = (float)val_mg / 1000;
 			
 			/* save to accel on the axis */
-			accel.val[axis] = val_g;
-			//p++;
-			//p %= 3;
-			//if (p == 0) /* received 3 values, order doesn't matter */
-			//{
-			//	neo->handle_accel(accel);
-			//}
-			//printf("%d: %f\n", axis, val_g);
-		} else if (rel == 0) /* sends a rel 0 after each 3 reports on X, Y, and Z */
+			accel.val[axis_ind] = val_g;
+		}
+		else if (rel == 0) /* separator report */
 		{
-			neo->handle_accel(accel);
+			/* is touchscreen pressed? */
+			int read_len = read(neo->screen_desc, report, report_len);
+			/* this was a non-blocking read */
+			//if (read_len < 0)
+			//{
+			//	perror("read");
+			//	continue;
+			//}
+			pressed = (read_len > 0);
+			/* call back is called */
+			neo->handle_recv(pressed, accel);
 		}
 	}
 }
