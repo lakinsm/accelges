@@ -55,14 +55,6 @@ static void handle_signal(int signal);
 static void neo_handle_signal(int signal);
 
 /* this handler is called whenever the Wii sends acceleration reports */
-void neo_handle_accel(struct accel_3d_t accel)
-{
-	/* further call the recognizer */
-	ges_process_3d(&ges, accel);
-	//printf("%+f\t%+f\t%+f\n", accel.val[0], accel.val[1], accel.val[2]);
-}
-
-/* this handler is called whenever the Wii sends acceleration reports */
 void handle_accel(unsigned char pressed, struct accel_3d_t accel)
 {
 	/* further call the recognizer */
@@ -114,7 +106,7 @@ int main(int argc, char **argv)
 	ges.handle_reco = handle_reco;
 	if (used_device == dev_wii)
 	{
-		wii.handle_accel = handle_accel;
+		wii.handle_recv = handle_accel;
 	
 		printf("Searching... (Press 1 and 2 on the Wii)\n");
 		if (wii_search(&wii, 5) < 0)
@@ -142,9 +134,9 @@ int main(int argc, char **argv)
 	}
 	else if (used_device == dev_neo)
 	{
-		if (neo_open(&neo))
+		if (neo_open(&neo, neo_accel2))
 		{
-			neo.handle_accel = neo_handle_accel;
+			neo.handle_recv = handle_accel;
 			
 			signal(SIGINT, neo_handle_signal);
 			signal(SIGTERM, neo_handle_signal);
