@@ -52,7 +52,7 @@ void wii_init(struct wii_t *wii)
 	wii->in_sock = -1;
 	wii->out_sock = -1;
 	wii->is_calibrated = 0;
-	wii->handle_accel = 0;
+	wii->handle_recv = 0;
 }
 
 /* 
@@ -274,7 +274,7 @@ static void wii_read(struct wii_t *wii)
 				accel.val[2] = ((float)(report[6] - wii->cal_zero.val[2])) / ((float)(wii->cal_one.val[2] - wii->cal_zero.val[2]));
 				
 				/* make callback to the function that handles accelertion */
-				wii->handle_accel(pressed, accel);
+				wii->handle_recv(pressed, accel);
 				
 				break;
 			case WII_RPT_READ:

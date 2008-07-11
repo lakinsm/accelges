@@ -70,8 +70,12 @@ typedef struct accel_3d_t {
 } accel_3d_t;
 #endif
 
-/* handler called by the Wii whenever new acceleration reports arrive */
-typedef void (* handle_accel_3d_t)(unsigned char pressed, struct accel_3d_t accel);
+#ifndef HANDLE_ACCEL_T
+#define HANDLE_ACCEL_T
+/* handle for acceleration */
+typedef void (* handle_recv_3d_t)(unsigned char pressed, struct accel_3d_t accel);
+
+#endif
 
 /* wii remote */
 typedef struct wii_t {
@@ -82,7 +86,7 @@ typedef struct wii_t {
 	unsigned char is_calibrated;
 	cal_3d_t cal_zero; /* calibration on zero g */
 	cal_3d_t cal_one; /* calibration on one g */
-	handle_accel_3d_t handle_accel;	
+	handle_recv_3d_t handle_recv;	
 } wii_t;
 
 /* initialize the Wii */
