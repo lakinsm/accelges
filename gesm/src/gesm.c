@@ -166,7 +166,7 @@ int main(int argc, char *argv[])
 			signal(SIGTERM, wii_signal_cb);
 			break;
 		case dev_neo2: /* --neo2 */
-			if (neo_open(&neo, neo_accel2)) {
+			if (!neo_open(&neo, neo_accel2)) {
 				fprintf(stderr, "Could not open top accelerometer.\n");
 				exit(1);
 			}
@@ -176,7 +176,7 @@ int main(int argc, char *argv[])
 			signal(SIGTERM, neo_signal_cb);
 			break;
 		case dev_neo3: /* --neo3 */
-			if (neo_open(&neo, neo_accel3)) {
+			if (!neo_open(&neo, neo_accel3)) {
 				fprintf(stderr, "Could not open bottom accelerometer.\n");
 				exit(1);
 			}
