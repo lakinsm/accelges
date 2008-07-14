@@ -1,1 +1,1 @@
-gesm --neo2 --dir /etc/gestures --accel
+gesm --neo2 --dir /etc/ges/neo2 --gui
