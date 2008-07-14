@@ -36,13 +36,18 @@
 
 static struct neo_t neo;
 static struct wii_t wii;
+
 static struct seq_3d_t seq;
+static struct class_2c_t endpoint;
 static unsigned char is_pressed;
+static unsigned char detected;
 
-struct gauss_mix_3d_t gauss_mix;
-struct gauss_mix_3d_t gauss_mix_est;
+static struct gauss_mix_3d_t gauss_mix;
+static struct gauss_mix_3d_t gauss_mix_est;
 
+/* vars from arguments that are used in callbacks */
 static char file[1024];
+static unsigned char verbose;
 
 /* */
 static void print_header(void);
@@ -55,11 +60,19 @@ static void wii_signal_cb(int signal);
 /* */
 static void neo_signal_cb(int signal);
 /* */
-void cmd_accel_cb(unsigned char pressed, struct accel_3d_t accel);
+static void cmd_accel_cb(unsigned char pressed, struct accel_3d_t accel);
 /* */
-void cmd_new_class_cb(unsigned char pressed, struct accel_3d_t accel);
+static void cmd_new_class_cb(unsigned char pressed, struct accel_3d_t accel);
 /* */
-void cmd_new_model_cb(unsigned char pressed, struct accel_3d_t accel);
+static void cmd_new_class_process(struct sample_3d_t feature[], unsigned int feature_len);
+/* */
+static void cmd_new_model_cb(unsigned char pressed, struct accel_3d_t accel);
+/* */
+static void cmd_new_model_process(struct accel_3d_t accels[], unsigned int accel_len);
+/* */
+static void cmd_train_class_cb(unsigned char pressed, struct accel_3d_t accel);
+/* */
+static void cmd_train_model_cb(unsigned char pressed, struct accel_3d_t accel);
 
 /*
  * 
@@ -84,6 +97,7 @@ int main(int argc, char *argv[])
 		{ "new", required_argument, 0, 'n' },
 		{ "view", required_argument, 0, 'o' },
 		{ "train", required_argument, 0, 'e' },
+		{ "verbose", no_argument, 0, 'r' },
 		{ "version", no_argument, 0, 'v' },
 		{ "help", no_argument, 0, 'h' },
 		{ 0, 0, 0, 0 }
@@ -93,8 +107,9 @@ int main(int argc, char *argv[])
 	
 	dir[0] = '\0';
 	file[0] = '\0';
+	verbose = 0;
 	opterr = 0;
-	while ((long_opt_val = getopt_long(argc, argv, "wqzd:gan:o:e:vh", long_opts, &long_opt_ind)) != -1) 
+	while ((long_opt_val = getopt_long(argc, argv, "wqzd:gan:o:e:rvh", long_opts, &long_opt_ind)) != -1) 
 	{
 		switch (long_opt_val)
 		{
@@ -120,6 +135,9 @@ int main(int argc, char *argv[])
 			case 'a': /* --accel */
 				cmd = long_opt_val;
 				break;
+			case 'r': /* --verbose */
+				verbose = 1;
+				break;
 			case 'v': /* --version */
 				print_version();
 				
@@ -143,95 +161,114 @@ int main(int argc, char *argv[])
 	/* should be ok here */
 	
 	/* device handshake */
-	switch (dev)
+	if (cmd != 'g') /* ! --gui */
 	{
-		case dev_wii1: /* --wii1 */
-			printf("Searching... (Press 1 and 2 on the Wii)\n");
-			if (wii_search(&wii, 5) < 0)
-			{
-				fprintf(stderr, "Could not find the Wii.\n");
-				exit(1);
-			}
-			printf("Found.\n");
+		switch (dev)
+		{
+			case dev_wii1: /* --wii1 */
+				printf("Searching... (Press 1 and 2 on the Wii)\n");
+				if (wii_search(&wii, 5) < 0) {
+					fprintf(stderr, "Could not find the Wii.\n");
+					exit(1);
+				}
+				printf("Found.\n");
 	
-			if (wii_connect(&wii) < 0)
-			{
-				fprintf(stderr, "Could not connect to the Wii.\n");
-				exit(1);
-			}
-			printf("Connected.\n");
-			wii_set_leds(&wii, 0, 0, 0, 1);
+				if (wii_connect(&wii) < 0) {
+					fprintf(stderr, "Could not connect to the Wii.\n");
+					exit(1);
+				}
+				printf("Connected.\n");
+				wii_set_leds(&wii, 0, 0, 0, 1);
 			
-			signal(SIGINT, wii_signal_cb);
-			signal(SIGTERM, wii_signal_cb);
-			break;
-		case dev_neo2: /* --neo2 */
-			if (!neo_open(&neo, neo_accel2)) {
-				fprintf(stderr, "Could not open top accelerometer.\n");
-				exit(1);
-			}
-			printf("Opened.\n");
+				signal(SIGINT, wii_signal_cb);
+				signal(SIGTERM, wii_signal_cb);
+				break;
+			case dev_neo2: /* --neo2 */
+				if (!neo_open(&neo, neo_accel2)) {
+					fprintf(stderr, "Could not open top accelerometer.\n");
+					exit(1);
+				}
+				printf("Connected to top accelerometer.\n");
 			
-			signal(SIGINT, neo_signal_cb);
-			signal(SIGTERM, neo_signal_cb);
-			break;
-		case dev_neo3: /* --neo3 */
-			if (!neo_open(&neo, neo_accel3)) {
-				fprintf(stderr, "Could not open bottom accelerometer.\n");
-				exit(1);
-			}
-			printf("Opened.\n");
+				signal(SIGINT, neo_signal_cb);
+				signal(SIGTERM, neo_signal_cb);
+				break;
+			case dev_neo3: /* --neo3 */
+				if (!neo_open(&neo, neo_accel3)) {
+					fprintf(stderr, "Could not open bottom accelerometer.\n");
+					exit(1);
+				}
+				printf("Connected to bottom accelerometer.\n");
 			
-			signal(SIGINT, neo_signal_cb);
-			signal(SIGTERM, neo_signal_cb);
-			break;
-		case dev_none:
-			exit(1);
-			break;
+				signal(SIGINT, neo_signal_cb);
+				signal(SIGTERM, neo_signal_cb);
+				break;
+			case dev_none:
+				exit(1);
+				break;
+		}
 	}
 	
-	chdir(dir);
-	p = rindex(file, '.');
+	/* prepare callbacks for requested command */
 	switch (cmd)
 	{
 		case 'g': /* --gui */
 			main_gui(argc, argv, dir);
 			break;
 		case 'a': /* --accel */
+			chdir(dir);
 			wii.handle_recv = cmd_accel_cb;
 			neo.handle_recv = cmd_accel_cb;
 			break;
 		case 'n': /* --new */
+		case 'o': /* --view */
+		case 'e': /* --train */
+			chdir(dir);
+			p = rindex(file, '.');
 			if ((p) && (strcmp(p, ".class") == 0)) { /* class */
-				wii.handle_recv = cmd_new_class_cb;
-				neo.handle_recv = cmd_new_class_cb;
+				if (cmd == 'n') { /* --new class */
+					wii.handle_recv = cmd_new_class_cb;
+					neo.handle_recv = cmd_new_class_cb;
+				} else if (cmd == 'o') { /* --view class */
+					
+				} else if (cmd == 'e') { /* --train class */
+					wii.handle_recv = cmd_train_class_cb;
+					neo.handle_recv = cmd_train_class_cb;
+				}
 			} else if ((p) && (strcmp(p, ".model") ==0)) { /* model */
-				wii.handle_recv = cmd_new_model_cb;
-				neo.handle_recv = cmd_new_model_cb;
+				if (cmd == 'n') { /* --new model */
+					wii.handle_recv = cmd_new_model_cb;
+					neo.handle_recv = cmd_new_model_cb;
+				} else if (cmd == 'o') { /* --view model */
+					
+				} else if (cmd == 'e') { /* --train model */
+					wii.handle_recv = cmd_train_model_cb;
+					neo.handle_recv = cmd_train_model_cb;
+				}
 			} else { /* unknown */
 				fprintf(stderr, "Unrecognized file extension (has to be .class or .model).\n");
 				exit(1);
 			}
 			
 			break;
-		case 'o': /* --view */
-			break;
-		case 'e': /* --train */
-			break;
 	}
-
-	switch (dev)
+	
+	if (cmd != 'g') /* ! --gui */
 	{
-		case dev_wii1:
-			wii_talk(&wii);
-			break;
-		case dev_neo2:
-		case dev_neo3:
-			neo_begin_read(&neo);
-			break;
-		case dev_none:
-			exit(1);
-			break;
+		/* begin reading accel values */
+		switch (dev)
+		{
+			case dev_wii1:
+				wii_talk(&wii);
+				break;
+			case dev_neo2:
+			case dev_neo3:
+				neo_begin_read(&neo);
+				break;
+			case dev_none:
+				exit(1);
+				break;
+		}
 	}
 	
 	return 0;	
@@ -242,7 +279,7 @@ int main(int argc, char *argv[])
  */
 static void print_header(void)
 {
-	printf("gesm: (C) 2008 OpenMoko Inc. Paul-Valentin Borza www.borza.ro\n"
+	printf("gesm: (C) 2008 Openmoko Inc. Paul-Valentin Borza <paul@borza.ro>\n"
 		"This program is free software under the terms of the GNU General Public License.\n\n");
 }
 
@@ -321,10 +358,9 @@ static void neo_signal_cb(int signal)
 /*
  * 
  */
-void cmd_accel_cb(unsigned char pressed, struct accel_3d_t accel)
+static void cmd_accel_cb(unsigned char pressed, struct accel_3d_t accel)
 {
-	if (pressed)
-	{
+	if (pressed) {
 		printf("%+f\t%+f\t%+f\n", accel.val[0], accel.val[1], accel.val[2]);
 	}	
 }
@@ -332,7 +368,7 @@ void cmd_accel_cb(unsigned char pressed, struct accel_3d_t accel)
 /*
  * 
  */
-void cmd_new_class_cb(unsigned char pressed, struct accel_3d_t accel)
+static void cmd_new_class_cb(unsigned char pressed, struct accel_3d_t accel)
 {
 	if (pressed) {
 		is_pressed = 1;
@@ -340,62 +376,22 @@ void cmd_new_class_cb(unsigned char pressed, struct accel_3d_t accel)
 	
 	if ((pressed) && (is_pressed)) {
 		seq.each[seq.index++] = accel;
-		printf("%+f\t%+f\t%+f\n", accel.val[0], accel.val[1], accel.val[2]);
+		if (verbose) {
+			printf("%+f\t%+f\t%+f\n", accel.val[0], accel.val[1], accel.val[2]);
+		}
 	}
 	else if ((!pressed) && (is_pressed))
 	{
 		unsigned int feature_len = seq.index - 2;
 		struct sample_3d_t feature[feature_len];
-		struct sample_3d_t sum;
-		sum.val[0] = 0.0;
-		sum.val[1] = 0.0;
-		sum.val[2] = 0.0;
 		
 		/* compute the feature vector for each frame */
-		printf("Features:\n");
 		int i;
 		for (i = 1; i < seq.index - 1; i++) {
 			ges_fea_3d(&seq, i, i - 1, &feature[i - 1]);
-			sum.val[0] += feature[i - 1].val[0];
-			sum.val[1] += feature[i - 1].val[1];
-			sum.val[2] += feature[i - 1].val[2];
-			printf("%+f\t%+f\t%+f\n", feature[i - 1].val[0], feature[i - 1].val[1], feature[i - 1].val[2]);
 		}
 		
-		/***
-		 * NEW CLASS
-		 ***/
-		/* one mixture */
-		gauss_mix_create_3d(&gauss_mix, 1);
-		gauss_mix_rand_3d(&gauss_mix);
-		gauss_mix.each[0].mean[0] = sum.val[0] / feature_len;
-		gauss_mix.each[0].mean[1] = sum.val[1] / feature_len;
-		gauss_mix.each[0].mean[2] = sum.val[2] / feature_len;
-		gauss_mix_print_3d(&gauss_mix);
-		/* check whether we want to commit changes */
-		char response;
-		printf("Make changes and save file? (Y/N)\n");
-		do {
-			response = getchar();
-			response = toupper(response);
-			/* clean the rest of the input */
-			while (getchar() != '\n')
-				;
-		} while ((response != 'Y') && (response != 'N'));
-		/* do selection */
-		if (response == 'Y') {
-			gauss_mix_write_3d(&gauss_mix, file);
-			printf("Saved changes to file.\n");
-			
-			/* don't forget to clean up */
-			gauss_mix_delete_3d(&gauss_mix);
-			
-			/* we're done */
-			kill(getpid(), SIGTERM);
-		} else if (response == 'N') {
-			printf("Discarded changes.\n");
-		}
-		gauss_mix_delete_3d(&gauss_mix);
+		cmd_new_class_process(feature, feature_len);
 		
 		/* reset counter */
 		seq.index = 0;
@@ -406,11 +402,207 @@ void cmd_new_class_cb(unsigned char pressed, struct accel_3d_t accel)
 /*
  * 
  */
-void cmd_new_model_cb(unsigned char pressed, struct accel_3d_t accel)
+static void cmd_new_class_process(struct sample_3d_t feature[], unsigned int feature_len)
 {
-	if (pressed)
-	{
-		printf("%+f\t%+f\t%+f\n", accel.val[0], accel.val[1], accel.val[2]);
-	}	
+	struct sample_3d_t sum;
+	sum.val[0] = 0.0;
+	sum.val[1] = 0.0;
+	sum.val[2] = 0.0;
+	
+	if (verbose) {
+		printf("Features:\n");
+	}
+	int i;
+	for (i = 1; i < seq.index - 1; i++) {
+		sum.val[0] += feature[i - 1].val[0];
+		sum.val[1] += feature[i - 1].val[1];
+		sum.val[2] += feature[i - 1].val[2];
+		if (verbose) {
+			printf("%+f\t%+f\t%+f\n", feature[i - 1].val[0], feature[i - 1].val[1], feature[i - 1].val[2]);
+		}
+	}
+	/***
+	 * NEW CLASS
+	 ***/
+	/* one mixture */
+	gauss_mix_create_3d(&gauss_mix, 1);
+	gauss_mix_rand_3d(&gauss_mix);
+	gauss_mix.each[0].mean[0] = sum.val[0] / feature_len;
+	gauss_mix.each[0].mean[1] = sum.val[1] / feature_len;
+	gauss_mix.each[0].mean[2] = sum.val[2] / feature_len;
+	if (verbose) {
+		gauss_mix_print_3d(&gauss_mix);
+	}
+	/* check whether we want to commit changes */
+	char response;
+	printf("Make changes and save file? (Y/N)\n");
+	do {
+		response = getchar();
+		response = toupper(response);
+		/* clean the rest of the input */
+		while (getchar() != '\n')
+			;
+	} while ((response != 'Y') && (response != 'N'));
+	/* do selection */
+	if (response == 'Y') {
+		gauss_mix_write_3d(&gauss_mix, file);
+		printf("Saved changes to file.\n");
+		
+		/* don't forget to clean up */
+		gauss_mix_delete_3d(&gauss_mix);
+		
+		/* we're done */
+		kill(getpid(), SIGTERM);
+	} else if (response == 'N') {
+		printf("Discarded changes.\n");
+	}
+	gauss_mix_delete_3d(&gauss_mix);	
 }
 
+/*
+ * 
+ */
+static void cmd_new_model_cb(unsigned char pressed, struct accel_3d_t accel)
+{
+	/* increment and save current frame (uses a circular list) */
+	unsigned int prev_index = seq.index;
+	seq.index = (seq.index + 1) % FRAME_LEN;
+	seq.each[seq.index] = accel;
+	
+	/* extract feature vector */
+	sample_3d_t feature;
+	ges_fea_3d(&seq, seq.index, prev_index, &feature);
+	
+	/* motion has index 1 and noise has index 0 */
+	if (class_max_2c(&endpoint, feature) == 1)
+	{
+		/* we want motion */
+		if (!detected)
+		{
+			seq.begin = seq.index;
+			detected = 1;
+			seq.till_end = FRAME_AFTER;
+		}
+	}
+	else
+	{
+		/* noise detected */
+		if (detected)
+		{
+			//printf("detected with size: %d\n", ges->seq.index - ges->seq.begin + 1);
+			if (seq.till_end > 0)
+				seq.till_end--;
+		}
+		if (seq.till_end == 0)
+		{
+			seq.end = seq.index;
+			detected = 0;
+			seq.till_end = FRAME_AFTER;
+		
+			//printf("Gesture detected with size: %d\n", ges->seq.end - ges->seq.begin + 1 - FRAME_AFTER);
+				 
+			/* case when begin < end */
+			if (seq.begin < seq.end)
+			{	
+				if (seq.end - seq.begin > FRAME_DIF + FRAME_AFTER)
+				{
+					int before = 0;
+					if (seq.begin > FRAME_BEFORE)
+					{
+						before = FRAME_BEFORE;
+					}
+					
+					unsigned int frame_len = seq.end - seq.begin + 1;
+					struct accel_3d_t accels[before + frame_len];
+					memcpy(&accels[before], &seq.each[seq.begin], frame_len * sizeof(sample_3d_t));
+					
+					if (before > 0)
+					{
+						memcpy(&accels[0], &seq.each[seq.begin - before], before * sizeof(sample_3d_t));
+					}
+	
+					cmd_new_model_process(accels, before + frame_len);
+				}
+			}
+			else /* case when begin > end */
+			{
+				if (FRAME_LEN - seq.begin + seq.end > FRAME_DIF + FRAME_AFTER)
+				{
+					int before = 0;
+					if (seq.begin - seq.end > FRAME_BEFORE)
+					{
+						before = FRAME_BEFORE;
+					}
+					unsigned int frame_len_end = FRAME_LEN - seq.begin;
+					unsigned int frame_len_begin = seq.end + 1;
+					unsigned int frame_len = frame_len_end + frame_len_begin;
+					struct accel_3d_t accels[before + frame_len];
+					memcpy(&accels[before], &seq.each[seq.begin], frame_len_end * sizeof(sample_3d_t));
+					memcpy(&accels[before + frame_len_end], &seq.each[0], frame_len_begin * sizeof(accel_3d_t));
+					
+					if (before > 0)
+					{
+						memcpy(&accels[0], &seq.each[seq.begin - before], before * sizeof(sample_3d_t));
+					}
+					
+					cmd_new_model_process(accels, before + frame_len); 
+				}
+			}
+		}
+	}
+
+	//printf("%+f\t%+f\t%+f\n", accel.val[0], accel.val[1], accel.val[2]);	
+}
+
+/*
+ * 
+ */
+static void cmd_new_model_process(struct accel_3d_t accels[], unsigned int accel_len)
+{
+	float prev_val[3] = { 0.0, 0.0, 0.0 };
+	int count = 1;
+	int i;
+	for (i = 0; i < accel_len; i++)
+	{	
+		if (i % 17 == 0)
+		{
+			printf("%+f\t%+f\t%+f ***\n", prev_val[0] / count, 
+				prev_val[1] / count, prev_val[2] / count);
+			prev_val[0] = accels[i].val[0];
+			prev_val[1] = accels[i].val[1];
+			prev_val[2] = accels[i].val[2];
+			count = 1;
+		} else {
+			prev_val[0] += accels[i].val[0];
+			prev_val[1] += accels[i].val[1];
+			prev_val[2] += accels[i].val[2];
+			count++;
+		}
+		printf("%+f\t%+f\t%+f\n", accels[i].val[0], accels[i].val[1], accels[i].val[2]);
+	}
+	
+	if (count > 0)
+	{
+		printf("*** %+f\t%+f\t%+f ***\n", prev_val[0] / count, 
+			prev_val[1] / count, prev_val[2] / count);
+	}
+	
+	printf("End of detection.\n");
+	fflush(stdout);
+}
+
+/*
+ * 
+ */
+static void cmd_train_class_cb(unsigned char pressed, struct accel_3d_t accel)
+{
+	
+}
+
+/*
+ * 
+ */
+static void cmd_train_model_cb(unsigned char pressed, struct accel_3d_t accel)
+{
+	
+}

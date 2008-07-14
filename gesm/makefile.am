@@ -18,6 +18,15 @@ gesm_SOURCES = \
 bin_SCRIPTS = \
 	scripts/gesm-neo.sh
 
+gladedir = $(datadir)/gesm
+glade_DATA = \
+	data/window.xml
+
+INCLUDES = -DGLADEDIR=\"$(gladedir)\"
+
+EXTRA_DIST = \
+	$(glade_DATA)
+
 gesm_LDADD  = \
 	-laccelneo \
 	-laccelwii \
@@ -29,4 +38,4 @@ gesm_LDFLAGS = \
 	-L$(top_builddir)/accelneo \
 	-L$(top_builddir)/accelwii \
 	-L$(top_builddir)/ges \
-	`pkg-config --libs gtk+-2.0`
+	`pkg-config --libs gtk+-2.0` -export-dynamic
