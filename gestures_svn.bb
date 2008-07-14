@@ -3,7 +3,7 @@ SECTION = "openmoko/utilities"
 
 PN = "gestures"
 PV = "0.1.0+svnr${SRCREV}"
-PR = "r1"
+PR = "r2"
 
 SRC_URI = "svn://svn.projects.openmoko.org/svnroot;module=gestures;proto=https"
 
