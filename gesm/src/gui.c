@@ -21,6 +21,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <dirent.h>
+#include <glade/glade.h>
 #include <gtk/gtk.h>
 #include <string.h>
 #include <unistd.h>
@@ -82,23 +83,21 @@ on_window_destroy (GtkObject *object, gpointer user_data)
 void
 main_gui (int argc, char *argv[], char *dir)
 {
-	GtkBuilder *builder;
+	GladeXML *xml;
 	GtkWidget *window;
+	
+	gtk_init(&argc, &argv);
+	xml = glade_xml_new(GLADEDIR "/window.glade", 0, 0);
+	
+	/* get a widget (useful if you want to change something) */
+	window = glade_xml_get_widget(xml, "window");
+	
+	/* connect signal handlers */
+	glade_xml_signal_autoconnect(xml);
 
-	gtk_init (&argc, &argv);
-	
-	builder = gtk_builder_new ();
-	gtk_builder_add_from_file (builder, GLADEDIR "/window.xml", NULL);
-	
-	window = GTK_WIDGET (gtk_builder_get_object (builder, "window"));
-	gtk_builder_connect_signals (builder, NULL);
-	g_object_unref (G_OBJECT (builder));
-	
 	gtk_widget_show (window);
 	/* change dir for config dir */
 	chdir (dir);
 	
-	gtk_main ();
-	
-	return 0;
+	gtk_main();
 }
