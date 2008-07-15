@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <!DOCTYPE glade-interface SYSTEM "glade-2.0.dtd">
-<!--Generated with glade3 3.4.5 on Mon Jul 14 19:40:05 2008 -->
+<!--Generated with glade3 3.4.5 on Tue Jul 15 17:05:00 2008 -->
 <glade-interface>
   <widget class="GtkWindow" id="window">
     <property name="title" translatable="yes">Gesture Manager</property>
     <signal name="destroy" handler="on_window_destroy"/>
     <child>
-      <widget class="GtkVBox" id="vbox1">
+      <widget class="GtkVBox" id="vbox">
         <property name="visible">True</property>
         <child>
           <widget class="GtkToolbar" id="toolbar1">
@@ -16,16 +16,18 @@
                 <property name="visible">True</property>
                 <property name="label" translatable="yes">New</property>
                 <property name="stock_id">gtk-new</property>
+                <signal name="clicked" handler="on_new_toolbutton_clicked"/>
               </widget>
               <packing>
                 <property name="expand">False</property>
               </packing>
             </child>
             <child>
-              <widget class="GtkToolButton" id="toolbutton2">
+              <widget class="GtkToolButton" id="train_toolbutton">
                 <property name="visible">True</property>
                 <property name="label" translatable="yes">Train</property>
                 <property name="stock_id">gtk-edit</property>
+                <signal name="clicked" handler="on_train_toolbutton_clicked"/>
               </widget>
               <packing>
                 <property name="expand">False</property>
@@ -37,13 +39,13 @@
           </packing>
         </child>
         <child>
-          <widget class="GtkScrolledWindow" id="scrolledwindow1">
+          <widget class="GtkScrolledWindow" id="scrolledwindow">
             <property name="visible">True</property>
             <property name="can_focus">True</property>
             <property name="hscrollbar_policy">GTK_POLICY_AUTOMATIC</property>
             <property name="vscrollbar_policy">GTK_POLICY_AUTOMATIC</property>
             <child>
-              <widget class="GtkTreeView" id="treeview1">
+              <widget class="GtkTreeView" id="treeview">
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="headers_clickable">True</property>
@@ -55,12 +57,11 @@
           </packing>
         </child>
         <child>
-          <widget class="GtkStatusbar" id="statusbar1">
+          <widget class="GtkLabel" id="label">
             <property name="visible">True</property>
-            <property name="spacing">2</property>
+            <property name="label" translatable="yes">label</property>
           </widget>
           <packing>
-            <property name="expand">False</property>
             <property name="position">2</property>
           </packing>
         </child>

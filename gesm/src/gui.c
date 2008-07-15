@@ -29,7 +29,6 @@
 enum
 {
 	COLUMN_NAME = 0,
-	COLUMN_STATUS,
 	COLUMN_LEN
 };
 
@@ -42,13 +41,30 @@ static void add_to_list(GtkWidget *list, const gchar *str)
 		(GTK_TREE_VIEW(list)));
 
 	gtk_list_store_append(store, &iter);
-	gtk_list_store_set(store, &iter, COLUMN_NAME, str, COLUMN_STATUS, "Trained", -1);
+	gtk_list_store_set(store, &iter, COLUMN_NAME, str, -1);
 }
 
 static int filter_model(struct dirent *entry)
 {
 	char *p = rindex(entry->d_name, '.');
-	return ((p) && (strcmp(p, ".hmm") == 0));
+	return ((p) && (strcmp(p, ".model") == 0));
+}
+
+static void init_list(GtkWidget *list)
+{
+	GtkCellRenderer *renderer;
+	GtkTreeViewColumn *column;
+	GtkListStore *store;
+	
+	renderer = gtk_cell_renderer_text_new();
+	column = gtk_tree_view_column_new_with_attributes("Gesture Name",
+		renderer, "text", COLUMN_NAME, NULL);
+	gtk_tree_view_append_column(GTK_TREE_VIEW(list), column);
+		
+	store = gtk_list_store_new(COLUMN_LEN, G_TYPE_STRING);
+	gtk_tree_view_set_model(GTK_TREE_VIEW(list), GTK_TREE_MODEL(store));
+
+	g_object_unref(store);
 }
 
 static void refresh_list(GtkWidget *list, char *dir)
@@ -79,18 +95,34 @@ on_window_destroy (GtkObject *object, gpointer user_data)
 	gtk_main_quit();
 }
 
+void
+on_new_toolbutton_clicked (GtkObject *object, gpointer user_data)
+{
+	printf("new clicked");
+}
+
+void
+on_train_toolbutton_clicked (GtkObject *object, gpointer user_data)
+{
+	printf("train clicked");
+}
+
 /* graphical user interface */
 void
 main_gui (int argc, char *argv[], char *dir)
 {
 	GladeXML *xml;
 	GtkWidget *window;
+	GtkWidget *treeview;
+	GtkWidget *label;
 	
 	gtk_init(&argc, &argv);
 	xml = glade_xml_new(GLADEDIR "/window.glade", 0, 0);
 	
 	/* get a widget (useful if you want to change something) */
 	window = glade_xml_get_widget(xml, "window");
+	treeview = glade_xml_get_widget(xml, "treeview");
+	label = glade_xml_get_widget(xml, "label");
 	
 	/* connect signal handlers */
 	glade_xml_signal_autoconnect(xml);
@@ -98,6 +130,10 @@ main_gui (int argc, char *argv[], char *dir)
 	gtk_widget_show (window);
 	/* change dir for config dir */
 	chdir (dir);
+	
+	/* load files */
+	init_list(treeview);
+	refresh_list(treeview, dir);
 	
 	gtk_main();
 }

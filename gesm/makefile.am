@@ -22,6 +22,10 @@ gladedir = $(datadir)/gesm
 glade_DATA = \
 	data/window.glade
 
+appdir = $(datadir)/applications
+app_DATA = \
+	data/gesm.desktop
+
 INCLUDES = -DGLADEDIR=\"$(gladedir)\"
 
 EXTRA_DIST = \
