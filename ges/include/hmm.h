@@ -29,8 +29,6 @@ typedef struct hmm_3d_t {
 	double **trans_prob; /* state transition probability matrix */
 	double *initial_prob; /* initial state probability vector */
 	gauss_mix_3d_t *output_prob; /* output probability vector */
-	unsigned int initial_state;
-	unsigned int final_state;	
 } hmm_3d_t;
 
 /* */

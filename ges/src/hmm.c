@@ -583,8 +583,6 @@ int hmm_write_3d(struct hmm_3d_t *hmm, char *file_name)
 	}
 	
 	fwrite(&hmm->state_len, sizeof(unsigned int), 1, file);
-	fwrite(&hmm->initial_state, sizeof(unsigned int), 1, file);
-	fwrite(&hmm->final_state, sizeof(unsigned int), 1, file);
 	fwrite(hmm->initial_prob, sizeof(double), hmm->state_len, file);
 	
 	int i;
@@ -620,8 +618,6 @@ int hmm_read_3d(struct hmm_3d_t *hmm, char *file_name)
 	}
 	
 	fread(&hmm->state_len, sizeof(unsigned int), 1, file);
-	fread(&hmm->initial_state, sizeof(unsigned int), 1, file);
-	fread(&hmm->final_state, sizeof(unsigned int), 1, file);
 	hmm->initial_prob = (double *)malloc(hmm->state_len * sizeof(double));
 	fread(hmm->initial_prob, sizeof(double), hmm->state_len, file);
 
@@ -749,8 +745,6 @@ void hmm_left_right_3d(struct hmm_3d_t *hmm)
 void hmm_print_3d(struct hmm_3d_t *hmm)
 {
 	printf("States: %d\n", hmm->state_len);
-	printf("Initial state: %d\n", hmm->initial_state);
-	printf("Final state: %d\n", hmm->final_state);
 	int i, j;
 	printf("Initial state distribution:\n");
 	for (i = 0; i < hmm->state_len; i++)
@@ -783,8 +777,6 @@ void hmm_copy_3d(struct hmm_3d_t *hmm_dest, struct hmm_3d_t *hmm_src)
 		return;
 	}
 	
-	hmm_dest->final_state = hmm_src->final_state;
-	hmm_dest->initial_state = hmm_src->initial_state;
 	for (i = 0; i < hmm_src->state_len; i++)
 	{
 		hmm_dest->initial_prob[i] = hmm_src->initial_prob[i];

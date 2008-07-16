@@ -43,6 +43,7 @@ static unsigned char is_pressed;
 static unsigned char detected;
 
 static struct gauss_mix_3d_t gauss_mix;
+static struct hmm_3d_t hmm;
 
 /* vars from arguments that are used in callbacks */
 static char file[1024];
@@ -93,7 +94,7 @@ static void cmd_model_new_end(char *file);
 /* */
 static void cmd_model_train_begin(char *file);
 /* */
-static void cmd_model_train_cb(char *file);
+static void cmd_model_train_cb(struct accel_3d_t accels[], unsigned int accel_len);
 /* */
 static void cmd_model_train_end(char *file);
 /* */
@@ -277,13 +278,20 @@ int main(int argc, char *argv[])
 				}
 			} else if ((p) && (strcmp(p, ".model") == 0)) { /* model */
 				if (cmd == 'n') { /* --new model */
-					wii.handle_recv = cmd_new_model_cb;
-					neo.handle_recv = cmd_new_model_cb;
+					wii.handle_recv = cmd_model_cb;
+					neo.handle_recv = cmd_model_cb;
+					handle_model = cmd_model_new_cb;
+					cmd_model_new_begin(file);
 				} else if (cmd == 'o') { /* --view model */
-					
+					wii.handle_recv = 0;
+					neo.handle_recv = 0;
+					handle_model = 0;
+					cmd_model_view_begin(file);
 				} else if (cmd == 'e') { /* --train model */
-					wii.handle_recv = cmd_train_model_cb;
-					neo.handle_recv = cmd_train_model_cb;
+					wii.handle_recv = cmd_model_cb;
+					neo.handle_recv = cmd_model_cb;
+					handle_model = cmd_model_train_cb;
+					cmd_model_train_begin(file);
 				}
 			} else { /* unknown */
 				fprintf(stderr, "Unrecognized file extension (has to be .class or .model).\n");
@@ -589,7 +597,7 @@ static void cmd_class_view_end(char *file)
 /*
  * 
  */
-static void cmd_new_model_cb(unsigned char pressed, struct accel_3d_t accel)
+static void cmd_model_cb(unsigned char pressed, struct accel_3d_t accel)
 {
 	/* increment and save current frame (uses a circular list) */
 	unsigned int prev_index = seq.index;
@@ -626,7 +634,7 @@ static void cmd_new_model_cb(unsigned char pressed, struct accel_3d_t accel)
 			detected = 0;
 			seq.till_end = FRAME_AFTER;
 		
-			//printf("Gesture detected with size: %d\n", ges->seq.end - ges->seq.begin + 1 - FRAME_AFTER);
+			printf("Gesture detected with size: %d\n", seq.end - seq.begin + 1 - FRAME_AFTER);
 				 
 			/* case when begin < end */
 			if (seq.begin < seq.end)
@@ -648,7 +656,9 @@ static void cmd_new_model_cb(unsigned char pressed, struct accel_3d_t accel)
 						memcpy(&accels[0], &seq.each[seq.begin - before], before * sizeof(sample_3d_t));
 					}
 	
-					cmd_new_model_process(accels, before + frame_len);
+					if (handle_model) {
+						handle_model(accels, before + frame_len);
+					}
 				}
 			}
 			else /* case when begin > end */
@@ -672,7 +682,9 @@ static void cmd_new_model_cb(unsigned char pressed, struct accel_3d_t accel)
 						memcpy(&accels[0], &seq.each[seq.begin - before], before * sizeof(sample_3d_t));
 					}
 					
-					cmd_new_model_process(accels, before + frame_len); 
+					if (handle_model) {
+						handle_model(accels, before + frame_len);
+					}
 				}
 			}
 		}
@@ -684,8 +696,32 @@ static void cmd_new_model_cb(unsigned char pressed, struct accel_3d_t accel)
 /*
  * 
  */
-static void cmd_new_model_process(struct accel_3d_t accels[], unsigned int accel_len)
+static void cmd_model_new_begin(char *file)
 {
+	endpoint.prior_prob[0] = 0.4; /* static */
+	endpoint.prior_prob[1] = 0.6; /* dynamic */
+	gauss_mix_read_3d(&endpoint.each[0], "s.class");	
+	gauss_mix_read_3d(&endpoint.each[1], "d.class");
+
+	seq.index = 0;
+	detected = 0;
+	seq.till_end = FRAME_AFTER;
+}
+
+/*
+ * 
+ */
+static void cmd_model_new_cb(struct accel_3d_t accels[], unsigned int accel_len)
+{
+	unsigned int state_len = accel_len / 17;
+	if (accel_len % 17 > 1) {
+		state_len += 1;
+	}
+	hmm_create_3d(&hmm, state_len);
+	hmm_left_right_3d(&hmm);
+
+	unsigned int state_ind = 0;
+
 	float prev_val[3] = { 0.0, 0.0, 0.0 };
 	int count = 1;
 	int i;
@@ -693,37 +729,186 @@ static void cmd_new_model_process(struct accel_3d_t accels[], unsigned int accel
 	{	
 		if (i % 17 == 0)
 		{
-			printf("%+f\t%+f\t%+f ***\n", prev_val[0] / count, 
-				prev_val[1] / count, prev_val[2] / count);
+			if (i > 0) {
+				gauss_mix_create_3d(&hmm.output_prob[state_ind], 1);
+				gauss_mix_rand_3d(&hmm.output_prob[state_ind]);
+				hmm.output_prob[state_ind].each[0].mean[0] = prev_val[0] / count;
+				hmm.output_prob[state_ind].each[0].mean[1] = prev_val[1] / count;
+				hmm.output_prob[state_ind].each[0].mean[2] = prev_val[2] / count;
+
+				hmm.output_prob[state_ind].each[0].covar[0][0] = 0.2;
+				hmm.output_prob[state_ind].each[0].covar[0][1] = 0.0;
+				hmm.output_prob[state_ind].each[0].covar[0][2] = 0.0;
+				
+				hmm.output_prob[state_ind].each[0].covar[1][0] = 0.0;
+				hmm.output_prob[state_ind].each[0].covar[1][1] = 0.2;
+				hmm.output_prob[state_ind].each[0].covar[1][2] = 0.0;
+					
+				hmm.output_prob[state_ind].each[0].covar[2][0] = 0.0;
+				hmm.output_prob[state_ind].each[0].covar[2][1] = 0.0;
+				hmm.output_prob[state_ind].each[0].covar[2][2] = 0.2;
+				
+				state_ind++;
+			}
+
+			if (verbose) {
+				printf("%+f\t%+f\t%+f ***\n", prev_val[0] / count, 
+					prev_val[1] / count, prev_val[2] / count);
+			}
 			prev_val[0] = accels[i].val[0];
 			prev_val[1] = accels[i].val[1];
 			prev_val[2] = accels[i].val[2];
-			count = 1;
+			count = 1;			
 		} else {
 			prev_val[0] += accels[i].val[0];
 			prev_val[1] += accels[i].val[1];
 			prev_val[2] += accels[i].val[2];
 			count++;
 		}
-		printf("%+f\t%+f\t%+f\n", accels[i].val[0], accels[i].val[1], accels[i].val[2]);
+		if (verbose) {
+			printf("%+f\t%+f\t%+f\n", accels[i].val[0], accels[i].val[1], accels[i].val[2]);
+		}
 	}
 	
-	if (count > 0)
+	if (count > 1)
 	{
-		printf("*** %+f\t%+f\t%+f ***\n", prev_val[0] / count, 
-			prev_val[1] / count, prev_val[2] / count);
+		gauss_mix_create_3d(&hmm.output_prob[state_ind], 1);
+		gauss_mix_rand_3d(&hmm.output_prob[state_ind]);
+		hmm.output_prob[state_ind].each[0].mean[0] = prev_val[0] / count;
+		hmm.output_prob[state_ind].each[0].mean[1] = prev_val[1] / count;
+		hmm.output_prob[state_ind].each[0].mean[2] = prev_val[2] / count;
+
+		hmm.output_prob[state_ind].each[0].covar[0][0] = 0.2;
+		hmm.output_prob[state_ind].each[0].covar[0][1] = 0.0;
+		hmm.output_prob[state_ind].each[0].covar[0][2] = 0.0;
+				
+		hmm.output_prob[state_ind].each[0].covar[1][0] = 0.0;
+		hmm.output_prob[state_ind].each[0].covar[1][1] = 0.2;
+		hmm.output_prob[state_ind].each[0].covar[1][2] = 0.0;
+					
+		hmm.output_prob[state_ind].each[0].covar[2][0] = 0.0;
+		hmm.output_prob[state_ind].each[0].covar[2][1] = 0.0;
+		hmm.output_prob[state_ind].each[0].covar[2][2] = 0.2;
+
+		if (verbose) {
+			printf("%+f\t%+f\t%+f ***\n", prev_val[0] / count, 
+				prev_val[1] / count, prev_val[2] / count);
+		}
 	}
 	
-	printf("End of detection.\n");
-	fflush(stdout);
+	hmm_print_3d(&hmm);
+	
+	if (do_confirm()) {
+		cmd_model_new_end(file);
+		
+		/* we're done */
+		kill(getpid(), SIGTERM);
+	}
+	hmm_delete_3d(&hmm);
+	
+	seq.index = 0;
+	detected = 0;
+	seq.till_end = FRAME_AFTER;
 }
 
 /*
  * 
  */
-static void cmd_train_model_cb(unsigned char pressed, struct accel_3d_t accel)
+static void cmd_model_new_end(char *file)
 {
+	hmm_write_3d(&hmm, file);
+	printf("Done.\n");
+		
+	hmm_delete_3d(&hmm);
+}
+
+/*
+ * 
+ */
+static void cmd_model_train_begin(char *file)
+{
+	if (hmm_read_3d(&hmm, file) != 0)
+	{
+		fprintf(stderr, "Could not load model from file.");
+		return;
+	}
+	hmm_print_3d(&hmm);
 	
+	endpoint.prior_prob[0] = 0.4; /* static */
+	endpoint.prior_prob[1] = 0.6; /* dynamic */
+	gauss_mix_read_3d(&endpoint.each[0], "s.class");	
+	gauss_mix_read_3d(&endpoint.each[1], "d.class");
+
+	seq.index = 0;
+	detected = 0;
+	seq.till_end = FRAME_AFTER;
+}
+
+/*
+ * 
+ */
+static void cmd_model_train_cb(struct accel_3d_t accels[], unsigned int accel_len)
+{
+	int i;
+	hmm_3d_t hmm_est;
+	hmm_create_3d(&hmm_est, hmm.state_len);
+	for (i = 0; i < hmm_est.state_len; i++)
+	{
+		gauss_mix_create_3d(&hmm_est.output_prob[i], hmm.output_prob[i].mix_len);
+	}
+	hmm_baum_welch(&hmm, &hmm_est, accels, accel_len);
+
+	if (verbose) {
+		hmm_print_3d(&hmm_est);
+	}
+
+	if (do_confirm()) {		
+		hmm_copy_3d(&hmm, &hmm_est);
+		hmm_delete_3d(&hmm_est);
+		cmd_model_train_end(file);
+		
+		/* we're done */
+		kill(getpid(), SIGTERM);
+	}
+	hmm_delete_3d(&hmm_est);
+	
+	seq.index = 0;
+	detected = 0;
+	seq.till_end = FRAME_AFTER;
+}
+
+/*
+ * 
+ */
+static void cmd_model_train_end(char *file)
+{
+	hmm_write_3d(&hmm, file);
+	printf("Done.\n");
+	
+	hmm_delete_3d(&hmm);	
+}
+
+/*
+ * 
+ */
+static void cmd_model_view_begin(char *file)
+{
+	if (hmm_read_3d(&hmm, file) != 0)
+	{
+		fprintf(stderr, "Could not load model from file.");
+		return;
+	}
+	hmm_print_3d(&hmm);
+
+	cmd_model_view_end(file);
+}
+
+/*
+ * 
+ */
+static void cmd_model_view_end(char *file)
+{
+	hmm_delete_3d(&hmm);
 }
 
 /*
