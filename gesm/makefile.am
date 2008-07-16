@@ -26,7 +26,7 @@ appdir = $(datadir)/applications
 app_DATA = \
 	data/gesm.desktop
 
-INCLUDES = -DGLADEDIR=\"$(gladedir)\"
+INCLUDES = -DGLADEDIR=\"$(gladedir)\" -DAPPDIR=\"$(bindir)\"
 
 EXTRA_DIST = \
 	$(glade_DATA)

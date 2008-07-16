@@ -20,11 +20,14 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 #include <dirent.h>
 #include <glade/glade.h>
 #include <gtk/gtk.h>
 #include <string.h>
 #include <unistd.h>
+#include <string.h>
 
 enum
 {
@@ -57,7 +60,7 @@ static void init_list(GtkWidget *list)
 	GtkListStore *store;
 	
 	renderer = gtk_cell_renderer_text_new();
-	column = gtk_tree_view_column_new_with_attributes("Gesture Name",
+	column = gtk_tree_view_column_new_with_attributes("Available gestures",
 		renderer, "text", COLUMN_NAME, NULL);
 	gtk_tree_view_append_column(GTK_TREE_VIEW(list), column);
 		
@@ -92,19 +95,65 @@ static void refresh_list(GtkWidget *list, char *dir)
 void 
 on_window_destroy (GtkObject *object, gpointer user_data)
 {
-	gtk_main_quit();
+	gtk_main_quit ();
 }
+
+GtkWidget *label;
 
 void
 on_new_toolbutton_clicked (GtkObject *object, gpointer user_data)
 {
-	printf("new clicked");
+	//FILE *p;
+	//p = popen("~/openmoko/gestures/bin/gesm --wii1 --dir ~/openmoko/gestures/config/neo2 --accel", "r");
+	//char c[512];
+	//while (fgets(c, sizeof(c), p) != 0)
+	//{
+	//	gtk_label_set_text(GTK_LABEL (label), c);
+	//}
+	//pclose(p);
+	int pipe_desc[2];
+	pid_t pid;
+	int rv;
+	
+	if (pipe (pipe_desc) < 0) {
+		perror ("pipe");
+		return;
+	}
+	
+	if ((pid = fork ()) < 0) {
+		perror ("fork");
+		return;
+	}
+	
+	if (pid > 0) { /* parent */
+		close (pipe_desc[1]); /* close write */
+		char received[512];
+		int read_len;
+		while ((read_len = read (pipe_desc[0], received, sizeof(received))) > 0)
+		{
+			char normalized[512];
+			memset(normalized, '\0', sizeof(normalized));
+			strncpy(normalized, received, (read_len % sizeof(normalized)));
+			normalized[511] = '\0';
+			printf("%s", normalized);
+			fflush(stdout);
+			gtk_label_set_text(GTK_LABEL (label), normalized);	
+		}
+		
+		close (pipe_desc[0]);
+		wait (&rv);
+		printf("child exited with return value %d\n", rv);
+	} else { /* child */
+		close (pipe_desc[0]); /* close read */
+		dup2 (pipe_desc[1], fileno (stdout)); /* change write */
+		execl (APPDIR "/gesm", "gesm", "--wii1", "--dir", "~/openmoko/gestures/config/neo2", "--accel", 0);
+	}
 }
 
 void
 on_train_toolbutton_clicked (GtkObject *object, gpointer user_data)
 {
-	printf("train clicked");
+	printf ("train clicked");
 }
 
 /* graphical user interface */
@@ -114,7 +163,7 @@ main_gui (int argc, char *argv[], char *dir)
 	GladeXML *xml;
 	GtkWidget *window;
 	GtkWidget *treeview;
-	GtkWidget *label;
+	
 	
 	gtk_init(&argc, &argv);
 	xml = glade_xml_new(GLADEDIR "/window.glade", 0, 0);

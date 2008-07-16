@@ -628,7 +628,7 @@ static void train_class(void)
 	}
 	gauss_mix_print_3d(&gauss_mix);
 	gauss_mix_create_3d(&gauss_mix_est, gauss_mix.mix_len);
-			
+	
 	seq.index = 0;
 	is_pressed = 0;
 	wii.handle_accel = class_handle_accel;

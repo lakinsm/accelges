@@ -21,11 +21,16 @@
 #ifndef GESM_H_
 #define GESM_H_
 
+#include "ges.h"
+
 typedef enum device {
 	dev_none = 0,
 	dev_wii1,
 	dev_neo2,
 	dev_neo3
 } device;
+
+typedef void (* class_process)(struct sample_3d_t sample[], unsigned int sample_len);
+typedef void (* model_process)(struct accel_3d_t accel[], unsigned int accel_len);
 
 #endif /*GESM_H_*/
