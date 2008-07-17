@@ -112,6 +112,7 @@ int main(int argc, char *argv[])
 	char cmd = '_';
 	char dir[1024];
 	char *p;
+	unsigned char no_header = 0;
 	
 	int long_opt_ind = 0;
 	int long_opt_val = 0;
@@ -128,19 +129,18 @@ int main(int argc, char *argv[])
 		{ "train", required_argument, 0, 'e' },
 		{ "verbose", no_argument, 0, 'p' },
 		{ "confirm", no_argument, 0, 'c' },
+		{ "no-header", no_argument, 0, 's' },
 		{ "version", no_argument, 0, 'v' },
 		{ "help", no_argument, 0, 'h' },
 		{ 0, 0, 0, 0 }
 	};
-
-	print_header();
 	
 	dir[0] = '\0';
 	file[0] = '\0';
 	verbose = 0;
 	confirm = 0;
 	opterr = 0;
-	while ((long_opt_val = getopt_long(argc, argv, "wqzd:gan:o:e:pcvh", long_opts, &long_opt_ind)) != -1) 
+	while ((long_opt_val = getopt_long(argc, argv, "wqzd:gan:o:e:pcsvh", long_opts, &long_opt_ind)) != -1) 
 	{
 		switch (long_opt_val)
 		{
@@ -172,6 +172,9 @@ int main(int argc, char *argv[])
 			case 'c': /* --confirm */
 				confirm = 1;
 				break;
+			case 's': /* --no-header */
+				no_header = 1;
+				break;
 			case 'v': /* --version */
 				print_version();
 				
@@ -186,6 +189,10 @@ int main(int argc, char *argv[])
 		}
 	}
 	
+	if (!no_header) {
+		print_header();
+	}
+		
 	/* minimum requirements */
 	if ((dev == dev_none) || (dir[0] == '\0') || (cmd == '_'))
 	{
@@ -201,17 +208,26 @@ int main(int argc, char *argv[])
 		{
 			case dev_wii1: /* --wii1 */
 				printf("Searching... (Press 1 and 2 on the Wii)\n");
+				fflush(stdout);
 				if (wii_search(&wii, 5) < 0) {
-					fprintf(stderr, "Could not find the Wii.\n");
+					//fprintf(stderr, "Could not find the Wii.\n");
+					//fflush(stderr);
+					printf("Could not find the Wii.\n");
+					fflush(stdout);
 					exit(1);
 				}
 				printf("Found.\n");
-	
+				fflush(stdout);
+				
 				if (wii_connect(&wii) < 0) {
-					fprintf(stderr, "Could not connect to the Wii.\n");
+					//fprintf(stderr, "Could not connect to the Wii.\n");
+					//fflush(stderr);
+					printf("Could not connect to the Wii.\n");
+					fflush(stdout);
 					exit(1);
 				}
 				printf("Connected.\n");
+				fflush(stdout);
 				wii_set_leds(&wii, 0, 0, 0, 1);
 			
 				signal(SIGINT, wii_signal_cb);
@@ -220,19 +236,23 @@ int main(int argc, char *argv[])
 			case dev_neo2: /* --neo2 */
 				if (!neo_open(&neo, neo_accel2)) {
 					fprintf(stderr, "Could not open top accelerometer.\n");
+					fflush(stderr);
 					exit(1);
 				}
 				printf("Connected to top accelerometer.\n");
-			
+				fflush(stdout);
+				
 				signal(SIGINT, neo_signal_cb);
 				signal(SIGTERM, neo_signal_cb);
 				break;
 			case dev_neo3: /* --neo3 */
 				if (!neo_open(&neo, neo_accel3)) {
 					fprintf(stderr, "Could not open bottom accelerometer.\n");
+					fflush(stderr);
 					exit(1);
 				}
 				printf("Connected to bottom accelerometer.\n");
+				fflush(stdout);
 			
 				signal(SIGINT, neo_signal_cb);
 				signal(SIGTERM, neo_signal_cb);
@@ -247,7 +267,7 @@ int main(int argc, char *argv[])
 	switch (cmd)
 	{
 		case 'g': /* --gui */
-			main_gui(argc, argv, dir);
+			main_gui(argc, argv, dev, dir);
 			break;
 		case 'a': /* --accel */
 			chdir(dir);
@@ -329,6 +349,7 @@ static void print_header(void)
 {
 	printf("gesm: (C) 2008 Openmoko Inc. Paul-Valentin Borza <paul@borza.ro>\n"
 		"This program is free software under the terms of the GNU General Public License.\n\n");
+	fflush(stdout);
 }
 
 /*
@@ -337,6 +358,7 @@ static void print_header(void)
 static void print_version(void)
 {
 	printf("Version: %s\n", VERSION);
+	fflush(stdout);
 }
 
 /*
@@ -358,9 +380,11 @@ static void print_usage(void)
 		"Options:\n"
 		"   --verbose   \tdisplays additional information\n"
 		"   --confirm   \tasks confirmation for save\n"
+		"   --no-header \tdoesn't print the header\n"
 		"Remarks:\n"
 		"   neo2 refers to the top accelerometer, and\n"
 		"   neo3 refers to the bottom accelerometer;\n");
+	fflush(stdout);
 }
 
 /*
@@ -413,6 +437,7 @@ static void cmd_accel_cb(unsigned char pressed, struct accel_3d_t accel)
 {
 	if (pressed) {
 		printf("%+f\t%+f\t%+f\n", accel.val[0], accel.val[1], accel.val[2]);
+		fflush(stdout);
 	}	
 }
 
@@ -633,8 +658,10 @@ static void cmd_model_cb(unsigned char pressed, struct accel_3d_t accel)
 			seq.end = seq.index;
 			detected = 0;
 			seq.till_end = FRAME_AFTER;
-		
-			printf("Gesture detected with size: %d\n", seq.end - seq.begin + 1 - FRAME_AFTER);
+			
+			if (verbose) {
+				printf("detected of size: %d\n", seq.end - seq.begin + 1 - FRAME_AFTER);
+			}
 				 
 			/* case when begin < end */
 			if (seq.begin < seq.end)
@@ -689,8 +716,7 @@ static void cmd_model_cb(unsigned char pressed, struct accel_3d_t accel)
 			}
 		}
 	}
-
-	//printf("%+f\t%+f\t%+f\n", accel.val[0], accel.val[1], accel.val[2]);	
+	
 }
 
 /*
@@ -796,7 +822,9 @@ static void cmd_model_new_cb(struct accel_3d_t accels[], unsigned int accel_len)
 		}
 	}
 	
-	hmm_print_3d(&hmm);
+	if (verbose) {
+		hmm_print_3d(&hmm);
+	}
 	
 	if (do_confirm()) {
 		cmd_model_new_end(file);
@@ -818,7 +846,8 @@ static void cmd_model_new_end(char *file)
 {
 	hmm_write_3d(&hmm, file);
 	printf("Done.\n");
-		
+	fflush(stdout);
+	
 	hmm_delete_3d(&hmm);
 }
 
@@ -832,7 +861,9 @@ static void cmd_model_train_begin(char *file)
 		fprintf(stderr, "Could not load model from file.");
 		return;
 	}
-	hmm_print_3d(&hmm);
+	if (verbose) {
+		hmm_print_3d(&hmm);
+	}
 	
 	endpoint.prior_prob[0] = 0.4; /* static */
 	endpoint.prior_prob[1] = 0.6; /* dynamic */
@@ -884,6 +915,7 @@ static void cmd_model_train_end(char *file)
 {
 	hmm_write_3d(&hmm, file);
 	printf("Done.\n");
+	fflush(stdout);
 	
 	hmm_delete_3d(&hmm);	
 }
