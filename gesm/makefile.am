@@ -36,7 +36,8 @@ gesm_LDADD  = \
 	-laccelwii \
 	-lges \
 	-lbluetooth \
-	-lm
+	-lm \
+	-lpthread
 
 gesm_LDFLAGS = \
 	-L$(top_builddir)/accelneo \
