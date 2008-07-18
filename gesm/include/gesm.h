@@ -23,6 +23,11 @@
 
 #include "ges.h"
 
+typedef enum ui_mode {
+	console = 0, /* console ui */
+	graphical /* graphical ui */
+} ui_mode;
+
 typedef enum device {
 	dev_none = 0,
 	dev_wii1,
@@ -32,5 +37,12 @@ typedef enum device {
 
 typedef void (* class_process)(struct sample_3d_t sample[], unsigned int sample_len);
 typedef void (* model_process)(struct accel_3d_t accel[], unsigned int accel_len);
+
+/* */
+void handshake(char cmd);
+
+char file[1024];
+char dir[1024];
+enum device g_dev;
 
 #endif /*GESM_H_*/

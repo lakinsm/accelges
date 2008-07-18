@@ -39,10 +39,7 @@ enum
 	COLUMN_LEN
 };
 
-static enum device g_dev;
-static char *g_dir;
-
-static GtkWidget *label;
+static GtkWidget *label = 0;
 static GtkWidget *treeview;
 
 /* */
@@ -54,31 +51,32 @@ static void init_list (GtkWidget *list);
 /* */
 static void refresh_list (GtkWidget *list, char *dir);
 /* */
-void *read_from_console (void *arg);
-/* */
-static void run_command(handle_cmd handle_run);
-/* */
 void on_window_destroy (GtkObject *object, gpointer user_data);
 /* */
-void cmd_new(void);
+void *new_clicked (void *arg);
 /* */
 void on_new_toolbutton_clicked (GtkObject *object, gpointer user_data);
 /* */
-void cmd_train(void);
+void *train_clicked (void *arg);
 /* */
 void on_train_toolbutton_clicked (GtkObject *object, gpointer user_data);
 /* */
 void on_refresh_toolbutton_clicked (GtkObject *object, gpointer user_data);
 
+/* */
+void update_gui(char *msg)
+{
+	if (label) {
+		gtk_label_set_text(GTK_LABEL (label), msg);
+	}	
+}
+
 /* graphical user interface */
-void main_gui (int argc, char *argv[], enum device dev, char *dir)
+void main_gui (int argc, char *argv[])
 {
 	GladeXML *xml;
 	GtkWidget *window;
-	
-	g_dev = dev;
-	g_dir = dir;
-	
+		
 	gtk_init(&argc, &argv);
 	xml = glade_xml_new(GLADEDIR "/window.glade", 0, 0);
 	
@@ -179,32 +177,6 @@ static void refresh_list(GtkWidget *list, char *dir)
 /*
  * 
  */
-void *read_from_console (void *arg)
-{
-	int in_desc = *(int *)arg;
-	char received[512];
-	int read_len;
-	int rv;
-	while ((read_len = read (in_desc, received, sizeof(received))) > 0)
-	{
-		char normalized[512];
-		memset(normalized, '\0', sizeof(normalized));
-		strncpy(normalized, received, (read_len % sizeof(normalized)));
-		normalized[511] = '\0';
-		printf("%s", normalized);
-		fflush(stdout);
-		gtk_label_set_text(GTK_LABEL (label), normalized);	
-	}
-	
-	close (in_desc);
-	wait (&rv);
-
-	return 0;
-}
-
-/*
- * 
- */
 void on_window_destroy (GtkObject *object, gpointer user_data)
 {
 	gtk_main_quit ();
@@ -213,47 +185,27 @@ void on_window_destroy (GtkObject *object, gpointer user_data)
 /*
  * 
  */
+void *new_clicked (void *arg)
+{
+	handshake('n');
+}
+
+/*
+ * 
+ */
 void on_new_toolbutton_clicked (GtkObject *object, gpointer user_data)
 {
-	int pipe_desc[2];
-	pid_t pid;
-	
-	if (pipe (pipe_desc) < 0) {
-		perror ("pipe");
-		return;
-	}
-	
-	if ((pid = fork ()) < 0) {
-		perror ("fork");
-		return;
-	}
-	
-	if (pid > 0) { /* parent */
-		close (pipe_desc[1]); /* close write */
-		pthread_t thread;
-		int ret;
-		ret = pthread_create(&thread, 0, read_from_console, (void *)&pipe_desc[0]);
-		
-	} else { /* child */
-		close (pipe_desc[0]); /* close read */
-		dup2 (pipe_desc[1], fileno (stdout)); /* change write */
-		char *dev_arg = 0;
-		switch (g_dev)
-		{
-			case dev_wii1:
-				dev_arg = "--wii1";
-				break;
-			case dev_neo2:
-				dev_arg = "--neo2";
-				break;
-			case dev_neo3:
-				dev_arg = "--neo3";
-				break;
-			case dev_none:
-				break;
-		}
-		execl (APPDIR "/gesm", "gesm", dev_arg, "--dir", g_dir, "--new", "new.model", "--no-header", (char *)0);	
-	}
+	pthread_t thread;
+	strcpy(file, "new.model");	
+	pthread_create(&thread, 0, new_clicked, 0);
+}
+
+/*
+ * 
+ */
+void *train_clicked (void *arg)
+{
+	handshake('e');
 }
 
 /*
@@ -269,56 +221,17 @@ void on_train_toolbutton_clicked (GtkObject *object, gpointer user_data)
 	if (gtk_tree_selection_get_selected(selection, &model, &iter))
 	{
 		gchar *name;
-	
 		gtk_tree_model_get (model, &iter, COLUMN_NAME, &name, -1);
 
-		g_print ("selected row is: %s\n", name);
-
-		int pipe_desc[2];
-		pid_t pid;
-	
-		if (pipe (pipe_desc) < 0) {
-			perror ("pipe");
-			return;
-		}
-	
-		if ((pid = fork ()) < 0) {
-			perror ("fork");
-			return;
-		}
-	
-		if (pid > 0) { /* parent */
-			close (pipe_desc[1]); /* close write */
-			pthread_t thread;
-			int ret;
-			ret = pthread_create(&thread, 0, read_from_console, (void *)&pipe_desc[0]);
-		
-		} else { /* child */
-			close (pipe_desc[0]); /* close read */
-			dup2 (pipe_desc[1], fileno (stdout)); /* change write */
-			char *dev_arg = 0;
-			switch (g_dev)
-			{
-				case dev_wii1:
-					dev_arg = "--wii1";
-					break;
-				case dev_neo2:
-					dev_arg = "--neo2";
-					break;
-				case dev_neo3:
-					dev_arg = "--neo3";
-					break;
-				case dev_none:
-					break;
-			}
-			execl (APPDIR "/gesm", "gesm", dev_arg, "--dir", g_dir, "--train", name, "--no-header", (char *)0);	
-		}
+		pthread_t thread;
+		strcpy(file, name);
+		pthread_create(&thread, 0, train_clicked, 0);
 
 		g_free(name);
 	}
 	else
 	{
-	g_print ("no row selected.\n");
+		g_print ("no row selected.\n");
 	}
 }
 
@@ -327,6 +240,5 @@ void on_train_toolbutton_clicked (GtkObject *object, gpointer user_data)
  */
 void on_refresh_toolbutton_clicked (GtkObject *object, gpointer user_data)
 {
-	
-	refresh_list(treeview, g_dir);
+	refresh_list(treeview, dir);
 }

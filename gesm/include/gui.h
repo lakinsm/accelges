@@ -2,9 +2,10 @@
 #define GUI_H_
 
 #include "gesm.h"
-/* graphical user interface */
-void main_gui(int argc, char *argv[], enum device dev, char *dir);
+#include <gtk/gtk.h>
 
-typedef void (* handle_cmd)(void);
+/* graphical user interface */
+void main_gui(int argc, char *argv[]);
+void update_gui(char *msg);
 
 #endif /*GUI_H_*/

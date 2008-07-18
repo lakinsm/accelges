@@ -28,11 +28,14 @@
 
 #include "accelneo.h"
 #include "accelwii.h"
+#include "gauss.h"
 #include "ges.h"
 #include "gesm.h"
 #include "gui.h"
 
 #define VERSION "0.1"
+
+static enum ui_mode g_mode;
 
 static struct neo_t neo;
 static struct wii_t wii;
@@ -46,7 +49,6 @@ static struct gauss_mix_3d_t gauss_mix;
 static struct hmm_3d_t hmm;
 
 /* vars from arguments that are used in callbacks */
-static char file[1024];
 static unsigned char verbose;
 static unsigned char confirm;
 
@@ -63,6 +65,8 @@ static void print_usage(void);
 static void wii_signal_cb(int signal);
 /* */
 static void neo_signal_cb(int signal);
+/* */
+static void dev_close(enum device dev);
 /* */
 static void cmd_accel_cb(unsigned char pressed, struct accel_3d_t accel);
 /* */
@@ -108,11 +112,7 @@ static unsigned char do_confirm(void);
  */
 int main(int argc, char *argv[])
 {
-	enum device dev = dev_none;
 	char cmd = '_';
-	char dir[1024];
-	char *p;
-	unsigned char no_header = 0;
 	
 	int long_opt_ind = 0;
 	int long_opt_val = 0;
@@ -129,29 +129,30 @@ int main(int argc, char *argv[])
 		{ "train", required_argument, 0, 'e' },
 		{ "verbose", no_argument, 0, 'p' },
 		{ "confirm", no_argument, 0, 'c' },
-		{ "no-header", no_argument, 0, 's' },
 		{ "version", no_argument, 0, 'v' },
 		{ "help", no_argument, 0, 'h' },
 		{ 0, 0, 0, 0 }
 	};
 	
+	g_mode = console;
+	g_dev = dev_none;
 	dir[0] = '\0';
 	file[0] = '\0';
 	verbose = 0;
 	confirm = 0;
 	opterr = 0;
-	while ((long_opt_val = getopt_long(argc, argv, "wqzd:gan:o:e:pcsvh", long_opts, &long_opt_ind)) != -1) 
+	while ((long_opt_val = getopt_long(argc, argv, "wqzd:gan:o:e:pcvh", long_opts, &long_opt_ind)) != -1) 
 	{
 		switch (long_opt_val)
 		{
 			case 'w': /* --wii1 */
-				dev = (dev == dev_none) ? dev_wii1 : dev;
+				g_dev = (g_dev == dev_none) ? dev_wii1 : g_dev;
 				break;
 			case 'q': /* --neo2 */
-				dev = (dev == dev_none) ? dev_neo2 : dev;
+				g_dev = (g_dev == dev_none) ? dev_neo2 : g_dev;
 				break;
 			case 'z': /* --neo3 */
-				dev = (dev == dev_none) ? dev_neo3 : dev;
+				g_dev = (g_dev == dev_none) ? dev_neo3 : g_dev;
 				break;
 			case 'd': /* --dir */
 				strncpy(dir, optarg, sizeof(dir));
@@ -172,9 +173,6 @@ int main(int argc, char *argv[])
 			case 'c': /* --confirm */
 				confirm = 1;
 				break;
-			case 's': /* --no-header */
-				no_header = 1;
-				break;
 			case 'v': /* --version */
 				print_version();
 				
@@ -189,45 +187,63 @@ int main(int argc, char *argv[])
 		}
 	}
 	
-	if (!no_header) {
-		print_header();
-	}
+	print_header();
 		
 	/* minimum requirements */
-	if ((dev == dev_none) || (dir[0] == '\0') || (cmd == '_'))
+	if ((g_dev == dev_none) || (dir[0] == '\0') || (cmd == '_'))
 	{
 		print_usage();
 		exit(1);
 	}
 	/* should be ok here */
-	
+	if (cmd == 'g') /* --gui */
+	{
+		g_mode = graphical;
+		main_gui(argc, argv);
+	}
+	else
+	{
+		handshake(cmd);
+	}
+			
+	return 0;	
+}
+
+/*
+ * 
+ */
+void handshake(char cmd)
+{
+	char *p;
 	/* device handshake */
 	if ((cmd != 'g') && (cmd != 'o')) /* ! --gui and ! --view */
 	{
-		switch (dev)
+		switch (g_dev)
 		{
 			case dev_wii1: /* --wii1 */
 				printf("Searching... (Press 1 and 2 on the Wii)\n");
 				fflush(stdout);
+				if (g_mode == graphical) {
+					update_gui("Press 1 and 2 on the Wii");
+				}
 				if (wii_search(&wii, 5) < 0) {
-					//fprintf(stderr, "Could not find the Wii.\n");
-					//fflush(stderr);
-					printf("Could not find the Wii.\n");
-					fflush(stdout);
+					fprintf(stderr, "Could not find the Wii.\n");
+					fflush(stderr);
 					exit(1);
 				}
 				printf("Found.\n");
 				fflush(stdout);
 				
 				if (wii_connect(&wii) < 0) {
-					//fprintf(stderr, "Could not connect to the Wii.\n");
-					//fflush(stderr);
-					printf("Could not connect to the Wii.\n");
-					fflush(stdout);
+					fprintf(stderr, "Could not connect to the Wii.\n");
+					fflush(stderr);
 					exit(1);
 				}
 				printf("Connected.\n");
 				fflush(stdout);
+				if (g_mode == graphical) {
+					update_gui("Connected");
+				}
 				wii_set_leds(&wii, 0, 0, 0, 1);
 			
 				signal(SIGINT, wii_signal_cb);
@@ -239,8 +255,11 @@ int main(int argc, char *argv[])
 					fflush(stderr);
 					exit(1);
 				}
-				printf("Connected to top accelerometer.\n");
+				printf("Connected.\n");
 				fflush(stdout);
+				if (g_mode == graphical) {
+					update_gui("Connected");
+				}
 				
 				signal(SIGINT, neo_signal_cb);
 				signal(SIGTERM, neo_signal_cb);
@@ -251,9 +270,12 @@ int main(int argc, char *argv[])
 					fflush(stderr);
 					exit(1);
 				}
-				printf("Connected to bottom accelerometer.\n");
+				printf("Connected.\n");
 				fflush(stdout);
-			
+				if (g_mode == graphical) {
+					update_gui("Connected");
+				}
+				
 				signal(SIGINT, neo_signal_cb);
 				signal(SIGTERM, neo_signal_cb);
 				break;
@@ -267,7 +289,7 @@ int main(int argc, char *argv[])
 	switch (cmd)
 	{
 		case 'g': /* --gui */
-			main_gui(argc, argv, dev, dir);
+			//main_gui(argc, argv, g_dev, dir);
 			break;
 		case 'a': /* --accel */
 			chdir(dir);
@@ -324,7 +346,7 @@ int main(int argc, char *argv[])
 	if ((cmd != 'g') && (cmd != 'o')) /* ! --gui and ! --view */
 	{
 		/* begin reading accel values */
-		switch (dev)
+		switch (g_dev)
 		{
 			case dev_wii1:
 				wii_talk(&wii);
@@ -338,8 +360,6 @@ int main(int argc, char *argv[])
 				break;
 		}
 	}
-	
-	return 0;	
 }
 
 /*
@@ -380,7 +400,6 @@ static void print_usage(void)
 		"Options:\n"
 		"   --verbose   \tdisplays additional information\n"
 		"   --confirm   \tasks confirmation for save\n"
-		"   --no-header \tdoesn't print the header\n"
 		"Remarks:\n"
 		"   neo2 refers to the top accelerometer, and\n"
 		"   neo3 refers to the bottom accelerometer;\n");
@@ -396,12 +415,8 @@ static void wii_signal_cb(int signal)
 	{
 		case SIGINT:
 		case SIGTERM:
-			wii_set_leds(&wii, 1, 0, 0, 0);
-			wii_disconnect(&wii);			
-			printf("Disconnected.\n");
-			
-			fflush(stdout);
-			fflush(stderr);
+			dev_close(dev_wii1);
+		
 			exit(0);
 			break;
 		default:
@@ -418,15 +433,35 @@ static void neo_signal_cb(int signal)
 	{
 		case SIGINT:
 		case SIGTERM:
-			neo_close(&neo);
-			printf("Closed.\n");
-
-			fflush(stdout);
-			fflush(stderr);
+			dev_close(dev_neo2); /* or dev_neo3 */
+					
 			exit(0);
 			break;
 		default:
 			break;
+	}
+}
+
+/*
+ * 
+ */
+static void dev_close(enum device dev)
+{
+	if (dev == dev_wii1) {
+		wii_set_leds(&wii, 1, 0, 0, 0);
+		wii_disconnect(&wii);			
+		printf("Disconnected.\n");
+		fflush(stdout);
+		if (g_mode == graphical) {
+			update_gui("Disconnected");
+		}
+	} else if ((dev == dev_neo2) || (dev == dev_neo3)) 	{
+		neo_close(&neo);
+		printf("Closed.\n");
+		fflush(stdout);
+		if (g_mode == graphical) {
+			update_gui("Closed");
+		}
 	}
 }
 
@@ -539,6 +574,7 @@ static void cmd_class_new_end(char *file)
 {
 	gauss_mix_write_3d(&gauss_mix, file);
 	printf("Done.\n");
+	fflush(stdout);
 	
 	gauss_mix_delete_3d(&gauss_mix);
 }
@@ -592,6 +628,7 @@ static void cmd_class_train_end(char *file)
 {
 	gauss_mix_write_3d(&gauss_mix, file);
 	printf("Done.\n");
+	fflush(stdout);
 	
 	gauss_mix_delete_3d(&gauss_mix);	
 }
@@ -828,11 +865,14 @@ static void cmd_model_new_cb(struct accel_3d_t accels[], unsigned int accel_len)
 	
 	if (do_confirm()) {
 		cmd_model_new_end(file);
-		
+
 		/* we're done */
-		kill(getpid(), SIGTERM);
+		//kill(getpid(), SIGTERM);
 	}
-	hmm_delete_3d(&hmm);
+	else
+	{
+		hmm_delete_3d(&hmm);
+	}
 	
 	seq.index = 0;
 	detected = 0;
@@ -847,8 +887,20 @@ static void cmd_model_new_end(char *file)
 	hmm_write_3d(&hmm, file);
 	printf("Done.\n");
 	fflush(stdout);
+	if (g_mode == graphical) {
+		update_gui("Done");
+	}
 	
+	gauss_mix_delete_3d(&endpoint.each[0]);
+	gauss_mix_delete_3d(&endpoint.each[1]);
 	hmm_delete_3d(&hmm);
+	
+	if (g_mode == graphical) {
+		dev_close(g_dev);
+		pthread_exit(0);
+	} else {
+		kill(getpid(), SIGTERM);
+	}
 }
 
 /*
@@ -901,7 +953,10 @@ static void cmd_model_train_cb(struct accel_3d_t accels[], unsigned int accel_le
 		/* we're done */
 		kill(getpid(), SIGTERM);
 	}
-	hmm_delete_3d(&hmm_est);
+	else
+	{
+		hmm_delete_3d(&hmm_est);
+	}
 	
 	seq.index = 0;
 	detected = 0;
@@ -916,8 +971,20 @@ static void cmd_model_train_end(char *file)
 	hmm_write_3d(&hmm, file);
 	printf("Done.\n");
 	fflush(stdout);
+	if (g_mode == graphical) {
+		update_gui("Done");
+	}
 	
-	hmm_delete_3d(&hmm);	
+	gauss_mix_delete_3d(&endpoint.each[0]);
+	gauss_mix_delete_3d(&endpoint.each[1]);
+	hmm_delete_3d(&hmm);
+	
+	if (g_mode == graphical) {
+		dev_close(g_dev);
+		pthread_exit(0);
+	} else {
+		kill(getpid(), SIGTERM);
+	}	
 }
 
 /*
