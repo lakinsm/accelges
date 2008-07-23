@@ -24,13 +24,19 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <dbus/dbus-glib.h>
+#include <dbus/dbus-glib-bindings.h>
+#include <glib-object.h>
 
 #include "ges.h"
 #include "gesd.h"
 #include "accelneo.h"
 #include "accelwii.h"
+#include "service_server.h"
+#include "service.h"
 
 #define VERSION "0.1"
+G_DEFINE_TYPE( GesApplication, ges_service, G_TYPE_OBJECT );
 
 enum device used_device;
 
@@ -82,12 +88,98 @@ void handle_reco(char *reco)
 	printf("Returned.\n"); 
 }
 
+static guint sig;
+
+static void ges_service_class_init ( GesApplicationClass *ges_class )
+{
+	 sig =
+    g_signal_new ("recognized", 
+                  G_TYPE_FROM_CLASS (ges_class),
+                  G_SIGNAL_RUN_LAST,
+                  G_STRUCT_OFFSET (GesApplicationClass, recognized),
+                  NULL, NULL,
+                  g_cclosure_marshal_VOID__STRING,
+                  G_TYPE_NONE, 
+                  1, G_TYPE_STRING);
+	
+        dbus_g_object_type_install_info ( G_TYPE_FROM_CLASS ( ges_class ), &dbus_glib_gesd_object_info );
+}
+
+static void ges_service_init ( GesApplication *ges_object )
+{
+}
+
+gboolean
+gesd_listenfor (GesApplication *obj, const gchar *gesture, GError **error)
+{
+	system("echo received > /home/paul/openmoko/recv.txt");
+	return TRUE;
+}
+
+int dbus_comm(void)
+{
+	DBusGConnection *connection;
+  	DBusGProxy *proxy;
+  	GError *error = NULL;
+  	guint32 ret;
+  GesApplication *app;
+  	
+	  /* initialise type system */
+  g_type_init ();
+	
+	  /* Try and setup our DBus service */
+  connection = dbus_g_bus_get (DBUS_BUS_SESSION, &error);
+  if (connection == NULL)
+  {
+    g_warning ("Failed to make a connection to the session bus: %s", 
+               error->message);
+    g_error_free (error);
+    return 1;
+  }
+  
+    proxy = dbus_g_proxy_new_for_name (connection, 
+                                     DBUS_SERVICE_DBUS,
+                                     DBUS_PATH_DBUS, 
+                                     DBUS_INTERFACE_DBUS);
+    if (!org_freedesktop_DBus_request_name (proxy,
+                                          APP_SERVICE_NAME,
+                                          0, &ret, &error))
+  {
+    /* Error requesting the name */
+    g_warning ("There was an error requesting the name: %s\n",error->message);
+    g_error_free (error);
+
+    return 1;
+  }
+  if (ret != DBUS_REQUEST_NAME_REPLY_PRIMARY_OWNER)
+  {
+
+    dbus_g_connection_unref (connection);
+
+    return 1;
+  }
+  printf("so far so good\n");
+  
+	app = g_object_new ( GES_TYPE_APPLICATION, NULL );
+        dbus_g_object_type_install_info ( GES_TYPE_APPLICATION, &dbus_glib_gesd_object_info );
+
+        dbus_g_connection_register_g_object ( connection, APP_PATH_NAME, G_OBJECT( app ) );
+
+
+  
+  system("echo started auto > /home/paul/openmoko/recv.txt");
+  return 0;
+}
+
 /*
  * do not run in terminal: sudo hidd --search
  */
 int main(int argc, char **argv)
 {
 	print_header();
+	
+	if (dbus_comm() > 0)
+		return 1;
 	
 	/* get the configuration file name */
 	if (!parse_options(argc, argv))

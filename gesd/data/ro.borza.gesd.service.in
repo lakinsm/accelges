@@ -1,0 +1,3 @@
+[D-BUS Service]
+Name=ro.borza.gesd
+Exec=@bindir@/gesd --wii1 --load /home/paul/openmoko/gestures/config/wii1/amarok.ges
