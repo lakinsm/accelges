@@ -31,5 +31,7 @@ accelneo/makefile
 accelwii/makefile
 ges/makefile
 gesd/makefile
+gesd/data/ro.borza.gesd.service
+gesl/makefile
 gesm/makefile
 ])
