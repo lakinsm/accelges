@@ -4,27 +4,41 @@
 #include <glib.h>
 #include <glib-object.h>
 
-#define APP_SERVICE_NAME           "ro.borza.gesd"
-#define APP_PATH_NAME              "/ro/borza/gesd/Ges"
-#define APP_INTERFACE_NAME         "ro.borza.gesd.App"
-#define GES_TYPE_APPLICATION ( ges_service_get_type () )
+typedef struct Echo Echo;
+typedef struct EchoClass EchoClass;
 
-G_BEGIN_DECLS
+GType echo_get_type (void);
 
-typedef struct _GesApplication {
-        GObject object;
-} GesApplication;
+struct Echo
+{
+  GObject parent;
+};
 
-typedef struct _GesApplicationClass {
-        GObjectClass object_class;
-         
-        void (*recognized) (GesApplication *obj, const gchar *gesture);
-          
-} GesApplicationClass;
+struct EchoClass
+{
+  GObjectClass parent;
+  
+    void (*recognized) (Echo *echo, const gchar *id);
+};
 
-gboolean
-gesd_listenfor (GesApplication *obj, const gchar *gesture, GError **error);
+#define ECHO_TYPE              (echo_get_type ())
+#define ECHO(object)           (G_TYPE_CHECK_INSTANCE_CAST ((object), ECHO_TYPE, Echo))
+#define ECHO_CLASS(klass)      (G_TYPE_CHECK_CLASS_CAST ((klass), ECHO_TYPE, EchoClass))
+#define IS_ECHO(object)        (G_TYPE_CHECK_INSTANCE_TYPE ((object), ECHO_TYPE))
+#define IS_ECHO_CLASS(klass)   (G_TYPE_CHECK_CLASS_TYPE ((klass), ECHO_TYPE))
+#define ECHO_GET_CLASS(obj)    (G_TYPE_INSTANCE_GET_CLASS ((obj), ECHO_TYPE, EchoClass))
 
-G_END_DECLS
+typedef enum
+{
+  ECHO_ERROR_GENERIC
+} EchoError;
+
+GQuark echo_error_quark (void);
+#define ECHO_ERROR echo_error_quark ()
+
+/**
+ * Take @string, reverse it, and return it as @echo_string.
+ */
+gboolean listen(Echo *echo, gboolean enable, GError **error);
 
 #endif /*SERVICE_SERVER_H_*/

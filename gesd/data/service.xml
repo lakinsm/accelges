@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<node name="/ro/borza/gesd/Ges">
-	<interface name="ro.borza.gesd.App">
-		<annotation name="org.freedesktop.DBus.GLib.CSymbol" value="gesd"/>
-		<signal name="recognized">
-			<arg type="s" name="gesture"/>
-		</signal>
-		<method name="listenfor">
-			<arg type="s" name="gesture" direction="in" />
+<node name="/org/openmoko/gestures">
+	<interface name="org.openmoko.gestures.Recognizer">
+		<annotation name="org.freedesktop.DBus.GLib.CSymbol" value="recognizer"/>
+		<method name="Listen">
+			<annotation name="org.freedesktop.DBus.GLib.CSymbol" value="listen"/>
+			<arg type="b" name="enable" direction="in"/>
 		</method>
+		<signal name="Recognized">
+			<arg type="s" name="id"/>
+		</signal>
 	</interface>
 </node>
-

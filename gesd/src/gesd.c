@@ -27,6 +27,7 @@
 #include <dbus/dbus-glib.h>
 #include <dbus/dbus-glib-bindings.h>
 #include <glib-object.h>
+#include <pthread.h>
 
 #include "ges.h"
 #include "gesd.h"
@@ -36,7 +37,19 @@
 #include "service.h"
 
 #define VERSION "0.1"
-G_DEFINE_TYPE( GesApplication, ges_service, G_TYPE_OBJECT );
+/* Convenience macro to test and set a GError/return on failure */
+#define g_set_error_val_if_fail(test, returnval, error, domain, code) G_STMT_START{ \
+ if G_LIKELY (test) {} else { \
+   g_set_error (error, domain, code, #test); \
+   g_warning(#test " failed"); \
+   return (returnval); \
+ } \
+}G_STMT_END
+
+
+/* Generate the GObject boilerplate */
+G_DEFINE_TYPE(Echo, echo, G_TYPE_OBJECT)
+
 
 enum device used_device;
 
@@ -71,6 +84,11 @@ void handle_accel(unsigned char pressed, struct accel_3d_t accel)
 	}
 }
 
+#define ECHO_SERVICE_NAME "org.openmoko.gestures"
+
+GObject *obj;
+guint sig;
+
 /*
  * function called by the recognizer once the recognition is done 
  */
@@ -84,90 +102,103 @@ void handle_reco(char *reco)
 	//strcat(cmd, reco);
 	strcpy(cmd, reco);
 	printf("Run: %s\n", cmd);
-	system(cmd); // or execl ???
+	//system(cmd); // or execl ???
+	g_signal_emit (G_OBJECT (obj), sig, 
+                 0, cmd);
+	
 	printf("Returned.\n"); 
 }
 
-static guint sig;
-
-static void ges_service_class_init ( GesApplicationClass *ges_class )
+/* Create the Echo error quark */
+GQuark
+echo_error_quark (void)
 {
-	 sig =
-    g_signal_new ("recognized", 
-                  G_TYPE_FROM_CLASS (ges_class),
+  static GQuark quark = 0;
+  if (!quark)
+    quark = g_quark_from_static_string ("echo_error");
+  return quark;
+}
+
+static void
+die (const char *prefix, GError *error) 
+{
+  g_error("%s: %s", prefix, error->message);
+  g_error_free (error);
+  exit(1);
+}
+
+/* Class init */
+static void
+echo_class_init (EchoClass *echo_class)
+{
+	sig = g_signal_new ("recognized", 
+                  G_TYPE_FROM_CLASS (echo_class),
                   G_SIGNAL_RUN_LAST,
-                  G_STRUCT_OFFSET (GesApplicationClass, recognized),
+                  G_STRUCT_OFFSET (EchoClass, recognized),
                   NULL, NULL,
                   g_cclosure_marshal_VOID__STRING,
                   G_TYPE_NONE, 
                   1, G_TYPE_STRING);
 	
-        dbus_g_object_type_install_info ( G_TYPE_FROM_CLASS ( ges_class ), &dbus_glib_gesd_object_info );
+  dbus_g_object_type_install_info (G_TYPE_FROM_CLASS (echo_class), &dbus_glib_recognizer_object_info);
 }
 
-static void ges_service_init ( GesApplication *ges_object )
+/* Instance init */
+static void
+echo_init (Echo *echo)
 {
 }
 
-gboolean
-gesd_listenfor (GesApplication *obj, const gchar *gesture, GError **error)
+/* The echo method */
+gboolean listen(Echo *echo, gboolean enable, GError **error)
 {
-	system("echo received > /home/paul/openmoko/recv.txt");
-	return TRUE;
+  system("echo received something >> /home/paul/openmoko/recv.txt");
+  return TRUE;
 }
 
-int dbus_comm(void)
+void *dbus_comm(void *arg)
 {
-	DBusGConnection *connection;
-  	DBusGProxy *proxy;
-  	GError *error = NULL;
-  	guint32 ret;
-  GesApplication *app;
-  	
-	  /* initialise type system */
+  GMainLoop *loop;
+  DBusGConnection *connection;
+  GError *error = NULL;
+  DBusGProxy *driver_proxy;
+  guint32 request_name_ret;
+
   g_type_init ();
-	
-	  /* Try and setup our DBus service */
+  loop = g_main_loop_new (NULL, FALSE);
+
+  g_print ("Launching EchoObject\n");  
+
+  /* Obtain a connection to the session bus */
   connection = dbus_g_bus_get (DBUS_BUS_SESSION, &error);
   if (connection == NULL)
-  {
-    g_warning ("Failed to make a connection to the session bus: %s", 
-               error->message);
-    g_error_free (error);
-    return 1;
+    die ("Failed to open connection to bus", error);
+
+  obj = g_object_new (ECHO_TYPE, NULL);
+  dbus_g_connection_register_g_object (connection,
+                                       "/org/openmoko/gestures/Recognizer",
+                                       obj);
+
+  driver_proxy = dbus_g_proxy_new_for_name (connection,
+                                            DBUS_SERVICE_DBUS,
+                                            DBUS_PATH_DBUS,
+                                            DBUS_INTERFACE_DBUS);
+
+  if (!org_freedesktop_DBus_request_name (driver_proxy, ECHO_SERVICE_NAME,
+					  0, &request_name_ret, &error))
+    die ("Failed to get name", error);
+
+  if (request_name_ret != DBUS_REQUEST_NAME_REPLY_PRIMARY_OWNER) {
+    g_error ("Got result code %u from requesting name", request_name_ret);
+    exit (1);
   }
+
+  g_print ("GLib test service has name '%s'\n", ECHO_SERVICE_NAME);
+
+  g_print ("GLib test service entering main loop\n");
+  g_main_loop_run (loop);
+  //g_print ("Successfully completed %s\n", argv[0]);
   
-    proxy = dbus_g_proxy_new_for_name (connection, 
-                                     DBUS_SERVICE_DBUS,
-                                     DBUS_PATH_DBUS, 
-                                     DBUS_INTERFACE_DBUS);
-    if (!org_freedesktop_DBus_request_name (proxy,
-                                          APP_SERVICE_NAME,
-                                          0, &ret, &error))
-  {
-    /* Error requesting the name */
-    g_warning ("There was an error requesting the name: %s\n",error->message);
-    g_error_free (error);
-
-    return 1;
-  }
-  if (ret != DBUS_REQUEST_NAME_REPLY_PRIMARY_OWNER)
-  {
-
-    dbus_g_connection_unref (connection);
-
-    return 1;
-  }
-  printf("so far so good\n");
-  
-	app = g_object_new ( GES_TYPE_APPLICATION, NULL );
-        dbus_g_object_type_install_info ( GES_TYPE_APPLICATION, &dbus_glib_gesd_object_info );
-
-        dbus_g_connection_register_g_object ( connection, APP_PATH_NAME, G_OBJECT( app ) );
-
-
-  
-  system("echo started auto > /home/paul/openmoko/recv.txt");
   return 0;
 }
 
@@ -178,8 +209,10 @@ int main(int argc, char **argv)
 {
 	print_header();
 	
-	if (dbus_comm() > 0)
-		return 1;
+	pthread_t thread;
+	pthread_create(&thread, 0, dbus_comm, 0);
+	//if (dbus_comm() > 0)
+	//	return 1;
 	
 	/* get the configuration file name */
 	if (!parse_options(argc, argv))
