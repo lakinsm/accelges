@@ -203,18 +203,21 @@ void ges_delete_3d(struct ges_3d_t *ges)
  */
 void ges_read_3d(struct ges_3d_t *ges, struct config_t *config)
 {
-	gauss_mix_read_3d(&ges->endpoint.each[0], config->noise_file_name);	
+	ges->endpoint.prior_prob[0] = config->sclassp;
+	gauss_mix_read_3d(&ges->endpoint.each[0], config->sclass_file);
+	printf("%s\n", config->sclass_file);
 	//gauss_mix_print_3d(&ges->endpoint.each[0]);
-	gauss_mix_read_3d(&ges->endpoint.each[1], config->motion_file_name);
+	ges->endpoint.prior_prob[1] = config->dclassp;
+	gauss_mix_read_3d(&ges->endpoint.each[1], config->dclass_file);
 	//gauss_mix_print_3d(&ges->endpoint.each[1]);
 	
 	ges->model_len = config->model_len;
 	int i;
 	for (i = 0; i < ges->model_len; i++)
 	{
-		hmm_read_3d(&ges->model[i], config->model_file_name[i]);
-		strcpy(ges->model_cmd[i], config->model_cmd[i]);
-		printf("%s\n", ges->model_cmd[i]); 
+		hmm_read_3d(&ges->model[i], config->model_file[i]);
+		strcpy(ges->model_cmd[i], config->model_id[i]);
+		printf("%s: %s\n", config->model_file[i], ges->model_cmd[i]); 
 	}
 }
 
@@ -223,8 +226,8 @@ void ges_read_3d(struct ges_3d_t *ges, struct config_t *config)
  */
 void ges_write_3d(struct ges_3d_t *ges, struct config_t *config)
 {
-	gauss_mix_write_3d(&ges->endpoint.each[0], config->noise_file_name);
-	gauss_mix_write_3d(&ges->endpoint.each[1], config->motion_file_name);
+	gauss_mix_write_3d(&ges->endpoint.each[0], config->sclass_file);
+	gauss_mix_write_3d(&ges->endpoint.each[1], config->dclass_file);
 }
 
 /*
@@ -242,6 +245,7 @@ unsigned char ges_load_config(struct config_t *config, char *file_name)
 	path_copy[1023] = '\0';
 	/* pass a copy because dirname will modify it */
 	chdir(dirname(path_copy));
+	system("echo `pwd`");
 	
 	FILE *file;
 	char line[1024];
@@ -254,6 +258,7 @@ unsigned char ges_load_config(struct config_t *config, char *file_name)
 		return 0;
 	}
 	
+	config->class_len = 0;
 	config->model_len = 0;
 	
 	line_index = 0;
@@ -485,9 +490,34 @@ static unsigned char parse_line(struct config_t *config, char *line)
 		{
 			return 1; /* return success */
 		}
-		
-		if (strcmp(cmd_name, "noise") == 0)
-		{
+
+		if (strcmp(cmd_name, "sclassp") == 0) {
+			unsigned int no_param_len = strspn(&line[cmd_len], "\t\n") / sizeof(char);
+			char *params = &line[cmd_len + no_param_len];
+			char param_name[1024];
+			unsigned int param_len = strcspn(params, "\t\n") / sizeof(char);
+			strncpy(param_name, params, param_len);
+			param_name[param_len] = '\0';
+			
+			if (param_name[0] == '\0')
+			{
+				return 0; /* same as above */
+			}
+			config->sclassp = atof(param_name);		
+		} else if (strcmp(cmd_name, "dclassp") == 0) {
+			unsigned int no_param_len = strspn(&line[cmd_len], "\t\n") / sizeof(char);
+			char *params = &line[cmd_len + no_param_len];
+			char param_name[1024];
+			unsigned int param_len = strcspn(params, "\t\n") / sizeof(char);
+			strncpy(param_name, params, param_len);
+			param_name[param_len] = '\0';
+			
+			if (param_name[0] == '\0')
+			{
+				return 0; /* same as above */
+			}
+			config->dclassp = atof(param_name);		
+		} else if (strcmp(cmd_name, "sclass") == 0) {
 			unsigned int no_param_len = strspn(&line[cmd_len], "\t\n") / sizeof(char);
 			char *params = &line[cmd_len + no_param_len];
 			char param_name[1024];
@@ -500,10 +530,9 @@ static unsigned char parse_line(struct config_t *config, char *line)
 				return 0; /* must have param, so return failure */
 			}
 			
-			strcpy(config->noise_file_name, param_name);
+			strcpy(config->sclass_file, param_name);
 		}
-		else if (strcmp(cmd_name, "motion") == 0)
-		{
+		else if (strcmp(cmd_name, "dclass") == 0) {
 			unsigned int no_param_len = strspn(&line[cmd_len], "\t\n") / sizeof(char);
 			char *params = &line[cmd_len + no_param_len];
 			char param_name[1024];
@@ -516,9 +545,9 @@ static unsigned char parse_line(struct config_t *config, char *line)
 				return 0; /* same as above */
 			}
 			
-			strcpy(config->motion_file_name, param_name);	
+			strcpy(config->dclass_file, param_name);	
 		}
-		else if (strncmp(line, "hmm", cmd_len) == 0)
+		else if (strcmp(cmd_name, "model") == 0)
 		{
 			// TODO: parse hmm line
 			unsigned int no_param_len = strspn(&line[cmd_len], "\t\n") / sizeof(char);
@@ -544,12 +573,45 @@ static unsigned char parse_line(struct config_t *config, char *line)
 			
 			
 			/* model command that is returned when detected */
-			strcpy(config->model_cmd[config->model_len], param_name_1);
+			strcpy(config->model_id[config->model_len], param_name_1);
 			/* model file name to read data from */
-			strcpy(config->model_file_name[config->model_len], param_name_2);
+			strcpy(config->model_file[config->model_len], param_name_2);
 
 			//printf("arg %s and %s.\n", param_name_1, param_name_2);
 			config->model_len++;
+		}
+		else if (strcmp(cmd_name, "class") == 0)
+		{
+			// TODO: parse hmm line
+			unsigned int no_param_len = strspn(&line[cmd_len], "\t\n") / sizeof(char);
+			char *params = &line[cmd_len + no_param_len];
+			char param_name_1[1024];
+			unsigned int param_len_1 = strcspn(params, "\t\n") / sizeof(char);
+			strncpy(param_name_1, params, param_len_1);
+			// BUG HERE and also below
+			param_name_1[param_len_1] = '\0';
+			
+			if (param_name_1[0] == '\0')
+			{
+				return 0; /* must have param, so return failure */
+			}
+			
+			unsigned int no_param_len_2 = strspn(&line[cmd_len + no_param_len + param_len_1], " \t\n") / sizeof(char);
+			char *params_2 = &line[cmd_len + no_param_len + param_len_1 + no_param_len_2];
+			char param_name_2[1024];
+			unsigned int param_len_2 = strcspn(params_2, "\t\n") / sizeof(char);
+			// check length of param_len_2 with size of param_name_2!!!
+			strncpy(param_name_2, params_2, param_len_2);
+			param_name_2[param_len_2] = '\0';
+			
+			
+			/* model command that is returned when detected */
+			strcpy(config->class_id[config->model_len], param_name_1);
+			/* model file name to read data from */
+			strcpy(config->class_file[config->model_len], param_name_2);
+
+			//printf("arg %s and %s.\n", param_name_1, param_name_2);
+			config->class_len++;
 		}
 		else
 		{

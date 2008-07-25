@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2008 by OpenMoko, Inc.
- * Written by Paul-Valentin Borza <gestures@borza.ro>
+ * Copyright (C) 2008 by Openmoko, Inc.
+ * Written by Paul-Valentin Borza <paul@borza.ro>
  * All Rights Reserved
  *
  * This program is free software; you can redistribute it and/or modify
@@ -25,8 +25,7 @@
 
 typedef enum device {
 	dev_none = 0,
-	dev_wii = 1,
-	dev_neo	= 2
+	dev_wii, dev_neo2, dev_neo3
 } device;
 
 #endif /*GESD_H_*/

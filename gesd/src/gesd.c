@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2008 by OpenMoko, Inc.
- * Written by Paul-Valentin Borza <gestures@borza.ro>
+ * Copyright (C) 2008 by Openmoko, Inc.
+ * Written by Paul-Valentin Borza <paul@borza.ro>
  * All Rights Reserved
  *
  * This program is free software; you can redistribute it and/or modify
@@ -33,264 +33,139 @@
 #include "gesd.h"
 #include "accelneo.h"
 #include "accelwii.h"
-#include "service_server.h"
+#include "recognizer.h"
 #include "service.h"
 
 #define VERSION "0.1"
-/* Convenience macro to test and set a GError/return on failure */
-#define g_set_error_val_if_fail(test, returnval, error, domain, code) G_STMT_START{ \
- if G_LIKELY (test) {} else { \
-   g_set_error (error, domain, code, #test); \
-   g_warning(#test " failed"); \
-   return (returnval); \
- } \
-}G_STMT_END
+#define DBUS_SERVICE_NAME "org.openmoko.gestures"
+#define DBUS_RECOGNIZER_PATH "/org/openmoko/gestures/Recognizer"
 
+/* boilerplate for glib */
+G_DEFINE_TYPE(Recognizer, recognizer, G_TYPE_OBJECT)
+static GObject *reco;
+static guint reco_signal;
 
-/* Generate the GObject boilerplate */
-G_DEFINE_TYPE(Echo, echo, G_TYPE_OBJECT)
-
-
-enum device used_device;
-
-static wii_t wii;
-static neo_t neo;
-
+/* neo or wii use ges */
+static struct neo_t neo;
+static struct wii_t wii;
 static struct ges_3d_t ges;
-static struct config_t config;
-static char config_file_name[1024];
-
-/* print welcome message */
-static void print_header(void);
-/* print all command line options */
-static void print_usage(char *file_name);
-/* print current version */
-static void print_version(void);
-/* parse options given at command line */
-static unsigned char parse_options(int argc, char **argv);
-/* catches the termination signal and closes the Wii */
-static void handle_signal(int signal);
-/* catches the termination signal and closes the Wii */
-static void neo_handle_signal(int signal);
-
-/* this handler is called whenever the Wii sends acceleration reports */
-void handle_accel(unsigned char pressed, struct accel_3d_t accel)
-{
-	/* further call the recognizer */
-	ges_process_3d(&ges, accel);
-	if (pressed)
-	{
-		printf("%+f\t%+f\t%+f\n", accel.val[0], accel.val[1], accel.val[2]);
-	}
-}
-
-#define ECHO_SERVICE_NAME "org.openmoko.gestures"
-
-GObject *obj;
-guint sig;
 
 /*
- * function called by the recognizer once the recognition is done 
+ * 
  */
-void handle_reco(char *reco)
+static void recognizer_class_init(RecognizerClass *recognizer_class)
 {
-	char cmd[1024];
-	cmd[0] = '\0';
-	//strcat(cmd, "dcop amarok player ");
-	/* reco is specified in the call/call.ges file */
-	/* reco might be play, pause, next, prev, or etc. */
-	//strcat(cmd, reco);
-	strcpy(cmd, reco);
-	printf("Run: %s\n", cmd);
-	//system(cmd); // or execl ???
-	g_signal_emit (G_OBJECT (obj), sig, 
-                 0, cmd);
+	reco_signal = g_signal_new ("recognized",
+		G_TYPE_FROM_CLASS (recognizer_class),
+		G_SIGNAL_RUN_LAST,
+		G_STRUCT_OFFSET (RecognizerClass, recognized),
+		0, 0,
+		g_cclosure_marshal_VOID__STRING,
+		G_TYPE_NONE, 
+		1, G_TYPE_STRING);
 	
-	printf("Returned.\n"); 
-}
-
-/* Create the Echo error quark */
-GQuark
-echo_error_quark (void)
-{
-  static GQuark quark = 0;
-  if (!quark)
-    quark = g_quark_from_static_string ("echo_error");
-  return quark;
-}
-
-static void
-die (const char *prefix, GError *error) 
-{
-  g_error("%s: %s", prefix, error->message);
-  g_error_free (error);
-  exit(1);
-}
-
-/* Class init */
-static void
-echo_class_init (EchoClass *echo_class)
-{
-	sig = g_signal_new ("recognized", 
-                  G_TYPE_FROM_CLASS (echo_class),
-                  G_SIGNAL_RUN_LAST,
-                  G_STRUCT_OFFSET (EchoClass, recognized),
-                  NULL, NULL,
-                  g_cclosure_marshal_VOID__STRING,
-                  G_TYPE_NONE, 
-                  1, G_TYPE_STRING);
-	
-  dbus_g_object_type_install_info (G_TYPE_FROM_CLASS (echo_class), &dbus_glib_recognizer_object_info);
-}
-
-/* Instance init */
-static void
-echo_init (Echo *echo)
-{
-}
-
-/* The echo method */
-gboolean listen(Echo *echo, gboolean enable, GError **error)
-{
-  system("echo received something >> /home/paul/openmoko/recv.txt");
-  return TRUE;
-}
-
-void *dbus_comm(void *arg)
-{
-  GMainLoop *loop;
-  DBusGConnection *connection;
-  GError *error = NULL;
-  DBusGProxy *driver_proxy;
-  guint32 request_name_ret;
-
-  g_type_init ();
-  loop = g_main_loop_new (NULL, FALSE);
-
-  g_print ("Launching EchoObject\n");  
-
-  /* Obtain a connection to the session bus */
-  connection = dbus_g_bus_get (DBUS_BUS_SESSION, &error);
-  if (connection == NULL)
-    die ("Failed to open connection to bus", error);
-
-  obj = g_object_new (ECHO_TYPE, NULL);
-  dbus_g_connection_register_g_object (connection,
-                                       "/org/openmoko/gestures/Recognizer",
-                                       obj);
-
-  driver_proxy = dbus_g_proxy_new_for_name (connection,
-                                            DBUS_SERVICE_DBUS,
-                                            DBUS_PATH_DBUS,
-                                            DBUS_INTERFACE_DBUS);
-
-  if (!org_freedesktop_DBus_request_name (driver_proxy, ECHO_SERVICE_NAME,
-					  0, &request_name_ret, &error))
-    die ("Failed to get name", error);
-
-  if (request_name_ret != DBUS_REQUEST_NAME_REPLY_PRIMARY_OWNER) {
-    g_error ("Got result code %u from requesting name", request_name_ret);
-    exit (1);
-  }
-
-  g_print ("GLib test service has name '%s'\n", ECHO_SERVICE_NAME);
-
-  g_print ("GLib test service entering main loop\n");
-  g_main_loop_run (loop);
-  //g_print ("Successfully completed %s\n", argv[0]);
-  
-  return 0;
+	dbus_g_object_type_install_info(G_TYPE_FROM_CLASS(recognizer_class),
+		&dbus_glib_recognizer_object_info);
 }
 
 /*
- * do not run in terminal: sudo hidd --search
+ * 
  */
-int main(int argc, char **argv)
+static void recognizer_init (Recognizer *recognizer)
 {
-	print_header();
-	
-	pthread_t thread;
-	pthread_create(&thread, 0, dbus_comm, 0);
-	//if (dbus_comm() > 0)
-	//	return 1;
-	
-	/* get the configuration file name */
-	if (!parse_options(argc, argv))
-	{
-		exit(1);
-	}
-	
-	if (!ges_load_config(&config, config_file_name))
-	{
-		exit(2);
-	}
-	printf("Configuration loaded.\n");
-	ges_create_3d(&ges);
-	ges_read_3d(&ges, &config);
-	/* assign callbacks for recognition and acceleration */
-	ges.handle_reco = handle_reco;
-	if (used_device == dev_wii)
-	{
-		wii.handle_recv = handle_accel;
-	
-		printf("Searching... (Press 1 and 2 on the Wii)\n");
-		if (wii_search(&wii, 5) < 0)
-		{
-			fprintf(stderr, "Could not find the Wii.\n");
-			ges_delete_3d(&ges);
-			exit(1);
-		}
-		printf("Found.\n");
-	
-		if (wii_connect(&wii) < 0)
-		{
-			fprintf(stderr, "Could not connect to the Wii.\n");
-			ges_delete_3d(&ges);
-			exit(1);
-		}
-		printf("Connected.\n");
-	
-		/* catch terminate signal to stop the read thread and close sockets */
-		signal(SIGINT, handle_signal);
-		signal(SIGTERM, handle_signal);
-	
-		wii_set_leds(&wii, 0, 0, 0, 1);
-		wii_talk(&wii); /* will enter loop and never get out */
-	}
-	else if (used_device == dev_neo)
-	{
-		if (neo_open(&neo, neo_accel2))
-		{
-			neo.handle_recv = handle_accel;
-			
-			signal(SIGINT, neo_handle_signal);
-			signal(SIGTERM, neo_handle_signal);
-		
-			neo_begin_read(&neo);
-		}
-	}
-	
-	/* won't reach this point, will be terminated with signal */
-	ges_delete_3d(&ges);
-	
-	exit(0);
 }
 
-/* 
+/*
+ * will do absolutely nothing
+ */
+gboolean listen(Recognizer *recognizer, gboolean enable, GError **error)
+{
+	return TRUE;
+}
+
+/*
+ * runs on another thread and provides services by dbus
+ */
+void *main_dbus(void *arg)
+{
+	GMainLoop *loop = 0;
+	DBusGConnection *conn = 0;
+	GError *error = 0;
+	DBusGProxy *driver_proxy = 0;
+	guint32 request_name_ret;
+	
+	g_type_init();
+	loop = g_main_loop_new(0, FALSE);
+
+	conn = dbus_g_bus_get(DBUS_BUS_SESSION, &error);
+	if (conn == 0) {
+		g_error("%s", error->message);
+		g_error_free(error);
+		pthread_exit(0);
+	}
+	
+	reco = g_object_new(RECOGNIZER_TYPE, NULL);
+	dbus_g_connection_register_g_object(conn,
+		DBUS_RECOGNIZER_PATH, reco);
+	
+	driver_proxy = dbus_g_proxy_new_for_name(conn,
+		DBUS_SERVICE_DBUS, DBUS_PATH_DBUS, DBUS_INTERFACE_DBUS);
+	
+	if (!org_freedesktop_DBus_request_name(driver_proxy,
+		DBUS_SERVICE_NAME, 0, &request_name_ret, &error)) {
+		g_error("%s", error->message);
+		g_error_free(error);
+		pthread_exit(0);
+	}
+	
+	if (request_name_ret != DBUS_REQUEST_NAME_REPLY_PRIMARY_OWNER) {
+		g_error ("Got result code %u from requesting name", request_name_ret);
+		exit (1);
+	}
+	
+	g_print("Dbus service running: '%s'\n", DBUS_SERVICE_NAME);
+	
+	g_main_loop_run (loop);
+	
+	return 0;
+}
+
+/*
+ * callback for a recognized gesture
+ */
+void recognized_cb(char *id)
+{
+	printf("Recognized: %s\n", id);
+	fflush(stdout);
+	
+	/* call dbus signal */
+	g_signal_emit(G_OBJECT(reco), reco_signal, 0, id); 
+}
+
+/*
  * print welcome message
  */
 static void print_header(void)
 {
-	printf("gesphone: (C) 2008 OpenMoko Inc. Paul-Valentin Borza\n"
+	printf("gesd: (C) 2008 OpenMoko Inc. Paul-Valentin Borza <paul@borza.ro>\n"
 		"This program is free software under the terms of the GNU General Public License.\n\n");
+	fflush(stdout);
 }
 
 /*
  * print all command line options 
  */
-static void print_usage(char *file_name)
+static void print_usage(void)
 {
-	printf("Usage: %s --wii | --neo --load <configuration> | --version | --help\n", file_name);
+	printf("Usage: gesd --wii  --config FILE\n"
+		"   or: gesd --neo2 --config FILE\n"
+		"   or: gesd --neo3 --config FILE\n"
+		"   or: gesd --version\n"
+		"   or: gesd --help\n"
+		"Remarks:\n"
+		"   neo2 refers to the top accelerometer, and\n"
+		"   neo3 refers to the bottom accelerometer;\n");
+	fflush(stdout);
 }
 
 /*
@@ -299,74 +174,13 @@ static void print_usage(char *file_name)
 static void print_version(void)
 {
 	printf("Version: %s\n", VERSION);
+	fflush(stdout);
 }
 
 /*
- * parse options given at command line
+ * callback for close signal for the Wii
  */
-static unsigned char parse_options(int argc, char **argv)
-{
-	int long_opt_ind = 0;
-	int long_opt_val = 0;
-	
-	static struct option long_opts[] = {
-		{ "wii", no_argument, 0, 'w' },
-		{ "neo", no_argument, 0, 'n' },
-		{ "version", no_argument, 0, 'v' },
-		{ "load", required_argument, 0, 'l' },
-		{ "help", no_argument, 0, 'h' },
-		{ 0, 0, 0, 0 }
-	};
-	
-	config_file_name[0] = '\0';
-	
-	used_device = dev_none;
-	
-	/* don't display errors to stderr */
-	opterr = 0;
-	while ((long_opt_val = getopt_long(argc, argv, "wnvl:h", long_opts, &long_opt_ind)) != -1) 
-	{
-		switch (long_opt_val)
-		{
-			case 'w':
-				used_device = dev_wii;
-				
-				break;
-			case 'n':
-				used_device = dev_neo;
-				
-				break;
-			case 'v':
-				print_version();
-				
-				exit(0);
-				break;
-			case 'l':
-				strncpy(config_file_name, optarg, sizeof(config_file_name));
-				config_file_name[sizeof(config_file_name) / sizeof(config_file_name[0]) - 1] = '\0';
-				break;
-			case 'h':
-			case '?':
-				print_usage(argv[0]);
-				
-				exit(0);
-				break;
-		}
-	}
-	
-	if ((used_device == dev_none) || (config_file_name[0] == '\0'))
-	{
-		print_usage(argv[0]);
-		return 0;
-	}
-	
-	return 1;
-}
-
-/*
- * catches the termination signal and disposes the Wii
- */
-static void handle_signal(int signal)
+static void wii_signal_cb(int signal)
 {
 	switch (signal)
 	{
@@ -375,9 +189,10 @@ static void handle_signal(int signal)
 			wii_set_leds(&wii, 1, 0, 0, 0);
 			wii_disconnect(&wii);
 			printf("Disconnected.\n");
-			ges_delete_3d(&ges);
 			fflush(stdout);
-			fflush(stderr);
+			/* clean mem */
+			ges_delete_3d(&ges);
+			
 			exit(0);
 			break;
 		default:
@@ -386,22 +201,212 @@ static void handle_signal(int signal)
 }
 
 /*
- * catches the termination signal and disposes the Neo
+ * callback for close signal for the Neo
  */
-static void neo_handle_signal(int signal)
+static void neo_signal_cb(int signal)
 {
 	switch (signal)
 	{
 		case SIGINT:
 		case SIGTERM:
 			neo_close(&neo);
-			printf("Closed device.\n");
-			ges_delete_3d(&ges);
+			printf("Closed.\n");
 			fflush(stdout);
-			fflush(stderr);
+			/* clean mem */
+			ges_delete_3d(&ges);
+			
 			exit(0);
 			break;
 		default:
 			break;
 	}
+}
+
+/*
+ * callback for acceleration reports
+ */
+void received_cb(unsigned char pressed, struct accel_3d_t accel)
+{
+	/* call recognizer */
+	ges_process_3d(&ges, accel);
+	
+	if (pressed) {
+		printf("%+f\t%+f\t%+f\n", accel.val[0], accel.val[1], accel.val[2]);
+		fflush(stdout);
+	}
+}
+
+/*
+ * handshake with the devices
+ */
+unsigned char handshake(enum device dev)
+{
+	if (dev == dev_none) {
+		return 0;
+	}
+	
+	switch (dev)
+	{
+		case dev_wii: /* --wii */
+			printf("Searching... (Press 1 and 2 on the Wii)\n");
+			fflush(stdout);
+			if (wii_search(&wii, 5) < 0) {
+				fprintf(stderr, "Could not find the Wii.\n");
+				fflush(stderr);
+				return 0;
+			}
+			printf("Found.\n");
+			fflush(stdout);
+			
+			if (wii_connect(&wii) < 0) {
+				fprintf(stderr, "Could not connect to the Wii.\n");
+				fflush(stderr);
+				return 0;
+			}
+			printf("Connected.\n");
+			fflush(stdout);
+
+			wii_set_leds(&wii, 0, 0, 0, 1);
+			
+			signal(SIGINT, wii_signal_cb);
+			signal(SIGTERM, wii_signal_cb);
+			break;
+		case dev_neo2: /* --neo2 */
+			if (!neo_open(&neo, neo_accel2)) {
+				fprintf(stderr, "Could not open top accelerometer.\n");
+				fflush(stderr);
+				return 0;
+			}
+			printf("Connected.\n");
+			fflush(stdout);
+			
+			signal(SIGINT, neo_signal_cb);
+			signal(SIGTERM, neo_signal_cb);
+			break;
+		case dev_neo3: /* --neo3 */
+			if (!neo_open(&neo, neo_accel3)) {
+				fprintf(stderr, "Could not open bottom accelerometer.\n");
+				fflush(stderr);
+				return 0;
+			}
+			printf("Connected.\n");
+			fflush(stdout);
+			
+			signal(SIGINT, neo_signal_cb);
+			signal(SIGTERM, neo_signal_cb);
+			break;
+		case dev_none:
+			return 0;
+			break;
+	}
+	/* success */
+	return 1;
+}
+
+/*
+ * main entry
+ */
+int main(int argc, char **argv)
+{
+	enum device dev_arg;
+	char config_arg[512];
+	
+	/* configuration read from config_arg */
+	struct config_t config;
+	
+	pthread_t dbus_thread;
+	
+	int long_opt_ind = 0;
+	int long_opt_val = 0;
+	
+	static struct option long_opts[] = {
+		{ "wii", no_argument, 0, 'w' },
+		{ "neo2", no_argument, 0, 'q' },
+		{ "neo3", no_argument, 0, 'z' },
+		{ "config", required_argument, 0, 'c' },
+		{ "version", no_argument, 0, 'v' },
+		{ "help", no_argument, 0, 'h' },
+		{ 0, 0, 0, 0 }
+	};
+	
+	print_header();
+	
+	dev_arg = dev_none;
+	config_arg[0] = '\0';
+	
+	/* don't display errors to stderr */
+	opterr = 0;
+	while ((long_opt_val = getopt_long(argc, argv, "wqzc:vh", long_opts, &long_opt_ind)) != -1) 
+	{
+		switch (long_opt_val)
+		{
+			case 'w': /* --wii */
+				dev_arg = (dev_arg == dev_none) ? dev_wii : dev_arg;
+				break;
+			case 'q': /* --neo2 */
+				dev_arg = (dev_arg == dev_none) ? dev_neo2 : dev_arg;
+				break;
+			case 'z': /* --neo3 */
+				dev_arg = (dev_arg == dev_none) ? dev_neo3 : dev_arg;
+				break;
+			case 'c': /* --config */
+				strncpy(config_arg, optarg, sizeof(config_arg));
+				config_arg[sizeof(config_arg) / sizeof(config_arg[0]) - 1] = '\0';				
+				break;
+			case 'v': /* --version */
+				print_version();
+				exit(0);
+				break;
+			case 'h': /* --help */
+			case '?':
+				print_usage();
+				exit(0);
+				break;
+		}
+	}
+	
+	/* minimum requirements */
+	if ((dev_arg == dev_none) || (config_arg[0] == '\0'))
+	{
+		print_usage();
+		exit(1);
+	}		
+	
+	/* begin thread for dbus service */
+	pthread_create(&dbus_thread, 0, main_dbus, 0);
+	/* assign descriptors for reading accel values */
+	if (!handshake(dev_arg)) {
+		exit(2);
+	}
+	
+	/* load configuration */
+	if (!ges_load_config(&config, config_arg)) {
+		exit(3);
+	}
+	ges_create_3d(&ges);
+	ges_read_3d(&ges, &config);
+	printf("Configuration loaded.\n");
+	fflush(stdout);
+	
+	/* assign callbacks for recognition and acceleration */
+	ges.handle_reco = recognized_cb;
+	
+	if (dev_arg == dev_wii) {
+		/* assign callback for acceleration */
+		wii.handle_recv = received_cb;
+		/* begin read loop */
+		wii_talk(&wii);
+	} else if ((dev_arg == dev_neo2) || (dev_arg == dev_neo3)) {
+		/* assign callback for acceleration */
+		neo.handle_recv = received_cb;
+		/* begin read loop */
+		neo_begin_read(&neo);
+	} else {
+		exit(4);
+	}
+	
+	/* clean mem, if we can reach here */
+	ges_delete_3d(&ges);
+	
+	exit(0);
 }

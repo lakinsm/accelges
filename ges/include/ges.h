@@ -38,12 +38,19 @@
 
 /* configuration type */
 typedef struct config_t {
-	char noise_file_name[1024];
-	char motion_file_name[1024];
-	unsigned int model_len;
-	/* max 100 models; TODO: should be dynamically allocated */
-	char model_file_name[100][1024];
-	char model_cmd[100][1024];
+	char sclass_file[512];
+	char dclass_file[512];
+	/* probabilities */
+	double sclassp;
+	double dclassp;
+	/* classes */
+	unsigned int class_len; /* < 128 */
+	char class_file[128][512];
+	char class_id[128][512];
+	/* models */
+	unsigned int model_len; /* < 128*/
+	char model_file[128][512];
+	char model_id[128][512];
 } config_t;
 
 #ifndef ACCEL_T
