@@ -71,7 +71,7 @@ static void recognizer_class_init(RecognizerClass *recognizer_class)
 /*
  * 
  */
-static void recognizer_init (Recognizer *recognizer)
+static void recognizer_init(Recognizer *recognizer)
 {
 }
 
@@ -123,7 +123,7 @@ void *main_dbus(void *arg)
 		exit (1);
 	}
 	
-	g_print("Dbus service running: '%s'\n", DBUS_SERVICE_NAME);
+	g_print("Dbus service running on: '%s'\n", DBUS_SERVICE_NAME);
 	
 	g_main_loop_run (loop);
 	
@@ -147,7 +147,7 @@ void recognized_cb(char *id)
  */
 static void print_header(void)
 {
-	printf("gesd: (C) 2008 OpenMoko Inc. Paul-Valentin Borza <paul@borza.ro>\n"
+	printf("gesd: (C) 2008 Openmoko Inc. Paul-Valentin Borza <paul@borza.ro>\n"
 		"This program is free software under the terms of the GNU General Public License.\n\n");
 	fflush(stdout);
 }
@@ -239,7 +239,7 @@ void received_cb(unsigned char pressed, struct accel_3d_t accel)
 /*
  * handshake with the devices
  */
-unsigned char handshake(enum device dev)
+static unsigned char handshake(enum device dev)
 {
 	if (dev == dev_none) {
 		return 0;

@@ -32,4 +32,6 @@ typedef struct class_2c_t {
 /* return the index of the maximum probability between the two classes */
 unsigned int class_max_2c(struct class_2c_t *class, struct sample_3d_t sample);
 
+unsigned int class_max_uc(struct gauss_mix_3d_t gauss_mix[], unsigned int gauss_mix_len, struct sample_3d_t sample);
+
 #endif /*CLASS_H_*/

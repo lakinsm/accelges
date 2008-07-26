@@ -46,3 +46,23 @@ unsigned int class_max_2c(struct class_2c_t *class, struct sample_3d_t sample)
 		return 1;
 	}
 }
+
+unsigned int class_max_uc(struct gauss_mix_3d_t gauss_mix[], unsigned int gauss_mix_len, struct sample_3d_t sample)
+{
+	double prior = 1.0 / (double)gauss_mix_len;
+	double prob_max = gauss_mix_disc_3d(&gauss_mix[0], sample, prior);
+	unsigned int ind_max = 0;
+	
+	int i;
+	for (i = 1; i < gauss_mix_len; i++)
+	{
+		double prob = gauss_mix_disc_3d(&gauss_mix[i], sample, prior);
+		if (prob > prob_max)
+		{
+			prob_max = prob;
+			ind_max = i;
+		}
+	}
+	
+	return ind_max;
+}

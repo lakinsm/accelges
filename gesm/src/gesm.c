@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2008 by OpenMoko, Inc.
- * Written by Paul-Valentin Borza <gestures@borza.ro>
+ * Copyright (C) 2008 by Openmoko, Inc.
+ * Written by Paul-Valentin Borza <paul@borza.ro>
  * All Rights Reserved
  *
  * This program is free software; you can redistribute it and/or modify
@@ -499,7 +499,16 @@ static void cmd_class_cb(unsigned char pressed, struct accel_3d_t accel)
 		/* compute the feature vector for each frame */
 		int i;
 		for (i = 1; i < seq.index - 1; i++) {
-			ges_fea_3d(&seq, i, i - 1, &feature[i - 1]);
+			if ((strcmp(file, "s.class") == 0) || 
+				(strcmp(file, "d.class") == 0)) {
+				/* use feature vectors is classifier */
+				ges_fea_3d(&seq, i, i - 1, &feature[i - 1]);
+			} else {
+				/* just use the acceleration values otherwise */
+				feature[i - 1].val[0] = seq.each[i - 1].val[0];
+				feature[i - 1].val[1] = seq.each[i - 1].val[1];
+				feature[i - 1].val[2] = seq.each[i - 1].val[2];
+			}
 		}
 		
 		if (handle_class) {
@@ -1028,4 +1037,3 @@ static unsigned char do_confirm(void)
 	}
 	return (response == 'Y') ? 1 : 0;
 }
-

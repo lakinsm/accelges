@@ -108,7 +108,35 @@ void ges_process_3d(struct ges_3d_t *ges, struct accel_3d_t accel)
 	}
 	else
 	{
-		/* noise detected */
+		/* classified as noise and it doesn't follow after a gesture */
+		if (!ges->detected)
+		{
+			struct sample_3d_t sample;
+			sample.val[0] = accel.val[0];
+			sample.val[1] = accel.val[1];
+			sample.val[2] = accel.val[2];
+			int i = class_max_uc(ges->class, ges->class_len, sample);
+			if (ges->prev_class_ind != i)
+			{
+				ges->prev_class_ind = i;
+				ges->prev_class_time = 0;
+				ges->prev_class_change = 1;
+			} else {
+				if (ges->prev_class_change) {
+					ges->prev_class_time++;
+				}
+				if (ges->prev_class_time > CLASS_TIME) {
+					/* screen orientation changed */
+					//printf("%s\n", ges->class_cmd[i]);
+					//fflush(stdout);
+					ges->prev_class_time = 0;
+					ges->prev_class_change = 0;
+					ges->handle_reco(ges->class_cmd[i]);
+				}
+			}
+		}
+		
+		/* classified as noise, and the gesture just finished */
 		if (ges->detected)
 		{
 			//printf("detected with size: %d\n", ges->seq.index - ges->seq.begin + 1);
@@ -181,12 +209,12 @@ void ges_create_3d(struct ges_3d_t *ges)
 	ges->seq.index = 0;
 	ges->detected = 0;
 	ges->seq.till_end = FRAME_AFTER;
+	ges->prev_class_ind = -1;
+	ges->prev_class_change = 1;
+	ges->prev_class_time = 0;
 	/* do not create here, will be created during reading from files */
 	//gauss_mix_create_3d(&ges->endpoint.each[0], 1);
 	//gauss_mix_create_3d(&ges->endpoint.each[1], 1);
-	/* TO-DO: write these values to files */
-	ges->endpoint.prior_prob[0] = 0.4; /* noise */
-	ges->endpoint.prior_prob[1] = 0.6; /* motion */
 }
 
 /* 
@@ -203,16 +231,25 @@ void ges_delete_3d(struct ges_3d_t *ges)
  */
 void ges_read_3d(struct ges_3d_t *ges, struct config_t *config)
 {
+	int i;
 	ges->endpoint.prior_prob[0] = config->sclassp;
 	gauss_mix_read_3d(&ges->endpoint.each[0], config->sclass_file);
-	printf("%s\n", config->sclass_file);
+	//printf("%s\n", config->sclass_file);
 	//gauss_mix_print_3d(&ges->endpoint.each[0]);
 	ges->endpoint.prior_prob[1] = config->dclassp;
 	gauss_mix_read_3d(&ges->endpoint.each[1], config->dclass_file);
 	//gauss_mix_print_3d(&ges->endpoint.each[1]);
 	
-	ges->model_len = config->model_len;
-	int i;
+	ges->class_len = config->class_len;
+	for (i = 0; i < ges->class_len; i++)
+	{
+		gauss_mix_read_3d(&ges->class[i], config->class_file[i]);
+		strcpy(ges->class_cmd[i], config->class_id[i]);
+		printf("%s: %s\n", config->class_file[i], ges->class_cmd[i]);
+	}
+	
+	
+	ges->model_len = config->model_len;	
 	for (i = 0; i < ges->model_len; i++)
 	{
 		hmm_read_3d(&ges->model[i], config->model_file[i]);
@@ -335,7 +372,8 @@ static void recognize(struct ges_3d_t *ges, struct accel_3d_t accel[], unsigned 
 			pruned[i] = 1;
 		}
 		/* prunning by state duration! */
-		if (!pruned[i])
+		//if (!pruned[i])
+		if (0)
 		{
 			/* prune if state duration contraint not met */
 			double state_prob[ges->model[i].state_len];
@@ -606,9 +644,9 @@ static unsigned char parse_line(struct config_t *config, char *line)
 			
 			
 			/* model command that is returned when detected */
-			strcpy(config->class_id[config->model_len], param_name_1);
+			strcpy(config->class_id[config->class_len], param_name_1);
 			/* model file name to read data from */
-			strcpy(config->class_file[config->model_len], param_name_2);
+			strcpy(config->class_file[config->class_len], param_name_2);
 
 			//printf("arg %s and %s.\n", param_name_1, param_name_2);
 			config->class_len++;

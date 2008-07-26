@@ -18,8 +18,8 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#ifndef SERVICE_SERVER_H_
-#define SERVICE_SERVER_H_
+#ifndef RECOGNIZER_H_
+#define RECOGNIZER_H_
 
 #include <glib.h>
 #include <glib-object.h>
@@ -49,4 +49,4 @@ GType recognizer_get_type(void);
 /* */
 gboolean listen(Recognizer *recognizer, gboolean enable, GError **error);
 
-#endif /*SERVICE_SERVER_H_*/
+#endif /*RECOGNIZER_H_*/

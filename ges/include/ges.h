@@ -36,6 +36,8 @@
 /* also send to the recognizer some more frames, after the ones classified */
 #define FRAME_AFTER 5
 
+#define CLASS_TIME 60
+
 /* configuration type */
 typedef struct config_t {
 	char sclass_file[512];
@@ -78,10 +80,19 @@ typedef struct ges_3d_t {
 	struct seq_3d_t seq;
 	unsigned char detected;
 	struct class_2c_t endpoint;
-	unsigned int model_len;
+	
+	/* max 100 classes */
+	unsigned int class_len;
+	struct gauss_mix_3d_t class[128];
+	char class_cmd[100][512];
+	int prev_class_ind;
+	unsigned char prev_class_change;
+	int prev_class_time;
 	/* max 100 models */
-	struct hmm_3d_t model[100];
-	char model_cmd[100][1024];
+	unsigned int model_len;
+	struct hmm_3d_t model[128];
+	char model_cmd[100][512];
+	
 	ges_reco_cb handle_reco;
 } ges_t;
 

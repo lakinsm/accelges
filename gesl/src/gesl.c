@@ -37,6 +37,21 @@ void recognized_cb(DBusGProxy *purple_proxy, const char *id,
 {
 	printf("Received: %s\n", id);
 	fflush(stdout);
+	if (strcmp(id, "screen_zzp") == 0) {
+		system("xrandr -o normal");
+	} else if (strcmp(id, "screen_zzn") == 0) {
+		system("xrandr -o normal");
+	} else if (strcmp(id, "screen_zpz") == 0) {
+		system("xrandr -o inverted");
+	} else if (strcmp(id, "screen_znz") == 0) {
+		system("xrandr -o normal");
+	} else if (strcmp(id, "screen_pzz") == 0) {
+		system("xrandr -o left");
+	} else if (strcmp(id, "screen_nzz") == 0) {
+		system("xrandr -o right");
+	} else {
+		printf("No associated action for gesture '%s'\n", id);
+	}
 }
 
 /*
