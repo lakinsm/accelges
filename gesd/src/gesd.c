@@ -230,10 +230,13 @@ void received_cb(unsigned char pressed, struct accel_3d_t accel)
 	/* call recognizer */
 	ges_process_3d(&ges, accel);
 	
+	/* slows down processing */
+	/*
 	if (pressed) {
 		printf("%+f\t%+f\t%+f\n", accel.val[0], accel.val[1], accel.val[2]);
 		fflush(stdout);
 	}
+	// */
 }
 
 /*

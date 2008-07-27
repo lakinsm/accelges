@@ -537,9 +537,9 @@ void hmm_baum_welch(struct hmm_3d_t *hmm, struct hmm_3d_t *hmm_est, struct sampl
 			int l;
 			for (l = 0; l < 3; l++)
 			{
-				if (hmm_est->output_prob[i].each[k].covar[l][l] < 0.001)
+				if (hmm_est->output_prob[i].each[k].covar[l][l] < 0.01)
 				{
-					hmm_est->output_prob[i].each[k].covar[l][l] = 0.001;
+					hmm_est->output_prob[i].each[k].covar[l][l] = 0.01;
 				}
 			}
 		}

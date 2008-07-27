@@ -263,6 +263,17 @@ void gauss_mix_den_est_3d(struct gauss_mix_3d_t *gauss_mix, struct gauss_mix_3d_
 		}
 	}
 	
+	for (i = 0; i < gauss_mix_est->mix_len; i++)
+	{
+		int l;
+		for (l = 0; l < 3; l++)
+		{
+			if (gauss_mix_est->each[i].covar[l][l] < 0.01)
+			{
+				gauss_mix_est->each[i].covar[l][l] = 0.01;
+			}
+		}
+	}
 	/* done */
 }
 
