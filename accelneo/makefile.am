@@ -1,0 +1,11 @@
+# (C) 2008 OpenMoko Inc. Paul-Valentin Borza
+
+AM_CFLAGS = \
+	-Iinclude \
+	${ALL_CFLAGS}
+
+lib_LTLIBRARIES = libaccelneo.la
+
+libaccelneo_la_SOURCES = \
+	src/accelneo.c
+
