@@ -1,0 +1,15 @@
+# (C) 2008 OpenMoko Inc. Paul-Valentin Borza
+
+AM_CFLAGS = \
+	-Iinclude \
+	${ALL_CFLAGS}
+
+lib_LTLIBRARIES = libges.la
+
+libges_la_SOURCES = \
+	src/class.c \
+	src/gauss.c \
+	src/ges.c \
+	src/hmm.c \
+	src/model.c
+
