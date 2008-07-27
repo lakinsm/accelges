@@ -1,6 +1,6 @@
 AC_PREREQ([2.53])
 
-AC_INIT([gestures], [0.1], [http://gestures.borza.ro])
+AC_INIT([accelges], [0.1], [http://gestures.borza.ro])
 AM_INIT_AUTOMAKE([subdir-objects])
 AM_MAINTAINER_MODE
 
