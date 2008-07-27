@@ -50,6 +50,8 @@ void recognized_cb(DBusGProxy *purple_proxy, const char *id,
 		system("xrandr -o left");
 	} else if (strcmp(id, "screen_nzz") == 0) {
 		system("xrandr -o right");
+	} else if (strcmp(id, "screen_npp") == 0) {
+		system("xrandr -o right");
 	} else {
 		printf("No associated action for gesture '%s'\n", id);
 	}
