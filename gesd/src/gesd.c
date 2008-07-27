@@ -135,8 +135,8 @@ void *main_dbus(void *arg)
  */
 void recognized_cb(char *id)
 {
-	printf("Recognized: %s\n", id);
-	fflush(stdout);
+	//printf("Recognized: %s\n", id);
+	//fflush(stdout);
 	
 	/* call dbus signal */
 	g_signal_emit(G_OBJECT(reco), reco_signal, 0, id); 
