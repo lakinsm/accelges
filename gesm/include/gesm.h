@@ -30,7 +30,7 @@ typedef enum ui_mode {
 
 typedef enum device {
 	dev_none = 0,
-	dev_wii1,
+	dev_wii,
 	dev_neo2,
 	dev_neo3
 } device;

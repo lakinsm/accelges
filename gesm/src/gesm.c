@@ -119,7 +119,7 @@ int main(int argc, char *argv[])
 	int long_opt_val = 0;
 	
 	static struct option long_opts[] = {
-		{ "wii1", no_argument, 0, 'w' },
+		{ "wii", no_argument, 0, 'w' },
 		{ "neo2", no_argument, 0, 'q' },
 		{ "neo3", no_argument, 0, 'z' },
 		{ "dir", required_argument, 0, 'd' },
@@ -146,8 +146,8 @@ int main(int argc, char *argv[])
 	{
 		switch (long_opt_val)
 		{
-			case 'w': /* --wii1 */
-				g_dev = (g_dev == dev_none) ? dev_wii1 : g_dev;
+			case 'w': /* --wii */
+				g_dev = (g_dev == dev_none) ? dev_wii : g_dev;
 				break;
 			case 'q': /* --neo2 */
 				g_dev = (g_dev == dev_none) ? dev_neo2 : g_dev;
@@ -221,7 +221,7 @@ void handshake(char cmd)
 	{
 		switch (g_dev)
 		{
-			case dev_wii1: /* --wii1 */
+			case dev_wii: /* --wii */
 				printf("Searching... (Press 1 and 2 on the Wii)\n");
 				fflush(stdout);
 				if (g_mode == graphical) {
@@ -349,7 +349,7 @@ void handshake(char cmd)
 		/* begin reading accel values */
 		switch (g_dev)
 		{
-			case dev_wii1:
+			case dev_wii:
 				wii_talk(&wii);
 				break;
 			case dev_neo2:
@@ -387,7 +387,7 @@ static void print_version(void)
  */
 static void print_usage(void)
 {	
-	printf("Usage: gesm --wii1 --dir DIRECTORY COMMAND OPTION\n"
+	printf("Usage: gesm --wii  --dir DIRECTORY COMMAND OPTION\n"
 		"   or: gesm --neo2 --dir DIRECTORY COMMAND OPTION\n"
 		"   or: gesm --neo3 --dir DIRECTORY COMMAND OPTION\n"
 		"   or: gesm --version\n"
@@ -416,7 +416,7 @@ static void wii_signal_cb(int signal)
 	{
 		case SIGINT:
 		case SIGTERM:
-			dev_close(dev_wii1);
+			dev_close(dev_wii);
 		
 			exit(0);
 			break;
@@ -448,7 +448,7 @@ static void neo_signal_cb(int signal)
  */
 static void dev_close(enum device dev)
 {
-	if (dev == dev_wii1) {
+	if (dev == dev_wii) {
 		wii_set_leds(&wii, 1, 0, 0, 0);
 		wii_disconnect(&wii);			
 		printf("Disconnected.\n");
