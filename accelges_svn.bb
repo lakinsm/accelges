@@ -3,11 +3,11 @@ SECTION = "openmoko/utilities"
 
 PN = "accelges"
 PV = "0.1.0+svnr${SRCREV}"
-PR = "r4"
+PR = "r6"
 
-SRC_URI = "svn://accelges.googlecode.com;module=svn;proto=https"
+SRC_URI = "svn://accelges.googlecode.com/svn;module=trunk;proto=https"
 
-S = "${WORKDIR}/svn"
+S = "${WORKDIR}/trunk"
 
 inherit autotools
 
