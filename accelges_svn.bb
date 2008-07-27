@@ -1,13 +1,13 @@
-DESCRIPTION = "Openmoko Gestures"
+DESCRIPTION = "Openmoko Accelerometer-based Gestures"
 SECTION = "openmoko/utilities"
 
-PN = "gestures"
+PN = "accelges"
 PV = "0.1.0+svnr${SRCREV}"
 PR = "r2"
 
-SRC_URI = "svn://svn.projects.openmoko.org/svnroot;module=gestures;proto=https"
+SRC_URI = "svn://accelges.googlecode.com;module=svn;proto=https"
 
-S = "${WORKDIR}/gestures"
+S = "${WORKDIR}/svn"
 
 inherit autotools
 
