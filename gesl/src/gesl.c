@@ -29,6 +29,7 @@
 #define DBUS_SERVICE_NAME "org.openmoko.gestures"
 #define DBUS_RECOGNIZER_PATH "/org/openmoko/gestures/Recognizer"
 #define DBUS_RECOGNIZER_NAME "org.openmoko.gestures.Recognizer"
+
 /*
  * 
  */

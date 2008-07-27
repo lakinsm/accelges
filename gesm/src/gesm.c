@@ -25,6 +25,7 @@
 #include <signal.h>
 #include <string.h>
 #include <unistd.h>
+#include <pthread.h>
 
 #include "accelneo.h"
 #include "accelwii.h"
@@ -529,6 +530,15 @@ static void cmd_class_new_begin(char *file)
 	gauss_mix_create_3d(&gauss_mix, 1);
 	gauss_mix_rand_3d(&gauss_mix);
 
+	/* TODO: move uniform distrib to gauss.c */
+	int i;
+	for (i = 0; i < gauss_mix.mix_len; i++)
+	{
+		gauss_mix.each[i].covar[0][0] = 0.2;
+		gauss_mix.each[i].covar[1][1] = 0.2;
+		gauss_mix.each[i].covar[2][2] = 0.2;
+	}
+	
 	seq.index = 0;
 	is_pressed = 0;
 }
