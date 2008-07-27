@@ -105,8 +105,8 @@ void ges_process_3d(struct ges_3d_t *ges, struct accel_3d_t accel)
 			ges->detected = 1;
 			ges->seq.till_end = FRAME_AFTER;
 
-			ges->prev_class_time = 0;
-			ges->prev_class_change = 0;
+			//ges->prev_class_time = 0;
+			//ges->prev_class_change = 0;
 		}
 	}
 	else
@@ -361,7 +361,7 @@ static void recognize(struct ges_3d_t *ges, struct accel_3d_t accel[], unsigned 
 		//unsigned char possib_max_reached_final_state = 0; 
 		//double possib_max = hmm_viterbi(&ges->model[i], accel, accel_len, decoded_states);
 		vals[i] = hmm_viterbi(&ges->model[i], accel, accel_len, decoded_states);
-		printf("%s:\n", ges->model_cmd[i]);
+		//printf("%s:\n", ges->model_cmd[i]);
 		//int t;
 		//for (t = 0; t < accel_len; t++)
 		//{
@@ -439,9 +439,10 @@ static void recognize(struct ges_3d_t *ges, struct accel_3d_t accel[], unsigned 
 	
 	for (i = 0; i < ges->model_len; i++)
 	{
-		printf("%s (%s): %e\n", ges->model_cmd[i], pruned[i] ? "pruned" : "unpruned", vals[i]);
+		printf("%s (%s):\t%e\n", ges->model_cmd[i], pruned[i] ? "pruned" : "unpruned", vals[i]);
 	}
-	
+	fflush(stdout);
+
 	double max = 0.0;
 	i = 0;
 	while ((i < ges->model_len) && pruned[i])
@@ -466,7 +467,7 @@ static void recognize(struct ges_3d_t *ges, struct accel_3d_t accel[], unsigned 
 	}
 	else
 	{
-		printf("No match.\n");
+		//printf("No match.\n");
 	}
 	
 	//double prev_max = -1.0e+07;

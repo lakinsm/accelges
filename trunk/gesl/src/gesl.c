@@ -59,7 +59,8 @@ void recognized_cb(DBusGProxy *purple_proxy, const char *id,
 	} else if (strcmp(id, "screen_ppp") == 0) {
 		system("xrandr -o inverted");
 	} else {
-		printf("No associated action for gesture '%s'\n", id);
+		printf("Gesture '%s'\n", id);
+		fflush(stdout);
 	}
 }
 
