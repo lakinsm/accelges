@@ -1,0 +1,12 @@
+# (C) 2008 OpenMoko Inc. Paul-Valentin Borza
+
+AM_CFLAGS = \
+	-Iinclude \
+	-I/usr/local/openmoko/arm/include \
+	${ALL_CFLAGS}
+
+lib_LTLIBRARIES = libaccelwii.la
+
+libaccelwii_la_SOURCES = \
+	src/accelwii.c
+
