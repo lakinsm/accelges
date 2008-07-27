@@ -1,4 +1,4 @@
 #!/bin/sh
 
-./autogen.sh --prefix=/home/paul/openmoko/gestures
+./autogen.sh --prefix=/home/paul/openmoko/accelges/build
 
