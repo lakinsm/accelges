@@ -1,0 +1,40 @@
+# (C) 2008 OpenMoko Inc. Paul-Valentin Borza
+
+AM_CFLAGS = \
+	-Iinclude \
+	-I${top_srcdir}/accelneo/include \
+	-I${top_srcdir}/accelwii/include \
+	-I${top_srcdir}/ges/include \
+	-I/usr/local/openmoko/arm/include \
+	`pkg-config --cflags dbus-glib-1` \
+	${ALL_CFLAGS}
+
+bin_PROGRAMS = gesd
+
+servicedir = $(datadir)/dbus-1/services
+service_DATA = \
+	data/org.openmoko.gestures.service
+	
+gesd_SOURCES = \
+	src/gesd.c
+
+bin_SCRIPTS = \
+	scripts/demowii.sh \
+	scripts/demoneo.sh \
+	scripts/demoneo-echo.sh \
+	scripts/gesd-neo.sh
+
+gesd_LDADD  = \
+	-laccelneo \
+	-laccelwii \
+	-lges \
+	-lbluetooth \
+	-lm \
+	-lpthread
+
+gesd_LDFLAGS = \
+	-L$(top_builddir)/accelneo \
+	-L$(top_builddir)/accelwii \
+	-L$(top_builddir)/ges \
+	`pkg-config --libs dbus-glib-1`
+

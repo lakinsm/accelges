@@ -1,0 +1,46 @@
+# (C) 2008 OpenMoko Inc. Paul-Valentin Borza
+
+AM_CFLAGS = \
+	-Iinclude \
+	-I${top_srcdir}/accelneo/include \
+	-I${top_srcdir}/accelwii/include \
+	-I${top_srcdir}/ges/include \
+	-I/usr/local/openmoko/arm/include \
+	`pkg-config --cflags gtk+-2.0 libglade-2.0` \
+	${ALL_CFLAGS}
+
+bin_PROGRAMS = gesm
+
+gesm_SOURCES = \
+	src/gesm.c \
+	src/gui.c
+
+bin_SCRIPTS = \
+	scripts/gesm-neo.sh
+
+gladedir = $(datadir)/gesm
+glade_DATA = \
+	data/window.glade
+
+appdir = $(datadir)/applications
+app_DATA = \
+	data/gesm.desktop
+
+INCLUDES = -DGLADEDIR=\"$(gladedir)\" -DAPPDIR=\"$(bindir)\"
+
+EXTRA_DIST = \
+	$(glade_DATA)
+
+gesm_LDADD  = \
+	-laccelneo \
+	-laccelwii \
+	-lges \
+	-lbluetooth \
+	-lm \
+	-lpthread
+
+gesm_LDFLAGS = \
+	-L$(top_builddir)/accelneo \
+	-L$(top_builddir)/accelwii \
+	-L$(top_builddir)/ges \
+	`pkg-config --libs gtk+-2.0 libglade-2.0` -export-dynamic
