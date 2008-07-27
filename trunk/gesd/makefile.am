@@ -19,10 +19,9 @@ gesd_SOURCES = \
 	src/gesd.c
 
 bin_SCRIPTS = \
-	scripts/demowii.sh \
-	scripts/demoneo.sh \
-	scripts/demoneo-echo.sh \
-	scripts/gesd-neo.sh
+	scripts/gesd-neo2.sh \
+	scripts/gesd-neo3.sh \
+	scripts/gesd-wii.sh
 
 gesd_LDADD  = \
 	-laccelneo \

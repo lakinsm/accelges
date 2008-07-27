@@ -12,10 +12,12 @@ S = "${WORKDIR}/trunk"
 inherit autotools
 
 do_install_append() {
-	install -d ${D}${sysconfdir}/ges/neo2
-	install -c -D -m 644 ${S}/config/neo2/* ${D}${sysconfdir}/ges/neo2
-	install -d ${D}${sysconfdir}/ges/neo3
-	install -c -D -m 644 ${S}/config/neo3/* ${D}${sysconfdir}/ges/neo3
+	install -d ${D}${sysconfdir}/accelges/neo2
+	install -c -D -m 644 ${S}/config/neo2/* ${D}${sysconfdir}/accelges/neo2
+	install -d ${D}${sysconfdir}/accelges/neo3
+	install -c -D -m 644 ${S}/config/neo3/* ${D}${sysconfdir}/accelges/neo3
+	install -d ${D}${sysconfdir}/accelges/wii
+	install -c -D -m 644 ${S}/config/wii/* ${D}${sysconfdir}/accelges/wii
 }
 
 FILES_${PN} += ${datadir}
