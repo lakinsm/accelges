@@ -3,7 +3,7 @@ SECTION = "openmoko/utilities"
 
 PN = "accelges"
 PV = "0.1.0+svnr${SRCREV}"
-PR = "r2"
+PR = "r4"
 
 SRC_URI = "svn://accelges.googlecode.com;module=svn;proto=https"
 
