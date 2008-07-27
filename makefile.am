@@ -1,0 +1,8 @@
+SUBDIRS = \
+	accelneo \
+	accelwii \
+	ges \
+	gesd \
+	gesl \
+	gesm
+
