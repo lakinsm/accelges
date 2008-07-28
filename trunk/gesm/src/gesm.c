@@ -122,7 +122,7 @@ int main(int argc, char *argv[])
 		{ "wii", no_argument, 0, 'w' },
 		{ "neo2", no_argument, 0, 'q' },
 		{ "neo3", no_argument, 0, 'z' },
-		{ "dir", required_argument, 0, 'd' },
+		{ "config", required_argument, 0, 'd' },
 		{ "gui", no_argument, 0, 'g' },
 		{ "accel", no_argument, 0, 'a' },
 		{ "new", required_argument, 0, 'n' },
@@ -155,7 +155,7 @@ int main(int argc, char *argv[])
 			case 'z': /* --neo3 */
 				g_dev = (g_dev == dev_none) ? dev_neo3 : g_dev;
 				break;
-			case 'd': /* --dir */
+			case 'd': /* --config */
 				strncpy(dir, optarg, sizeof(dir));
 				dir[sizeof(dir) / sizeof(dir[0]) - 1] = '\0';
 				break;
@@ -387,9 +387,9 @@ static void print_version(void)
  */
 static void print_usage(void)
 {	
-	printf("Usage: gesm --wii  --dir DIRECTORY COMMAND OPTION\n"
-		"   or: gesm --neo2 --dir DIRECTORY COMMAND OPTION\n"
-		"   or: gesm --neo3 --dir DIRECTORY COMMAND OPTION\n"
+	printf("Usage: gesm --wii  --config DIRECTORY COMMAND OPTION\n"
+		"   or: gesm --neo2 --config DIRECTORY COMMAND OPTION\n"
+		"   or: gesm --neo3 --config DIRECTORY COMMAND OPTION\n"
 		"   or: gesm --version\n"
 		"   or: gesm --help\n"
 		"Commands:\n"
