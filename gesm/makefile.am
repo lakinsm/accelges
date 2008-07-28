@@ -16,7 +16,8 @@ gesm_SOURCES = \
 	src/gui.c
 
 bin_SCRIPTS = \
-	scripts/gesm-neo.sh
+	scripts/gesm-neo2.sh \
+	scripts/gesm-neo3.sh
 
 gladedir = $(datadir)/gesm
 glade_DATA = \
