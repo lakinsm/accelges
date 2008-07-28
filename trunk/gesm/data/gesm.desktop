@@ -1,8 +1,8 @@
 [Desktop Entry]
 Encoding=UTF-8
 Name=Gesture Manager
-Comment=Train or create new gestures
-Exec=gesm-neo.sh
+Comment=Train gestures
+Exec=gesm-neo2.sh
 Icon=applications-games
 Terminal=false
 Type=Application
