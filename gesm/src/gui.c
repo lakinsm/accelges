@@ -29,6 +29,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <pthread.h>
+#include <glib.h>
 
 #include "gesm.h"
 #include "gui.h"
@@ -41,6 +42,8 @@ enum
 
 static GtkWidget *label = 0;
 static GtkWidget *treeview;
+static GtkWidget *cancel_toolbutton = 0;
+static GtkWidget *train_toolbutton = 0;
 
 /* */
 static void add_to_list (GtkWidget *list, const gchar *str);
@@ -53,9 +56,7 @@ static void refresh_list (GtkWidget *list, char *dir);
 /* */
 void on_window_destroy (GtkObject *object, gpointer user_data);
 /* */
-void *new_clicked (void *arg);
-/* */
-void on_new_toolbutton_clicked (GtkObject *object, gpointer user_data);
+void on_cancel_toolbutton_clicked (GtkObject *object, gpointer user_data);
 /* */
 void *train_clicked (void *arg);
 /* */
@@ -67,7 +68,10 @@ void on_refresh_toolbutton_clicked (GtkObject *object, gpointer user_data);
 void update_gui(char *msg)
 {
 	if (label) {
+		gdk_threads_enter();  // Protect from gtk main loop
 		gtk_label_set_text(GTK_LABEL (label), msg);
+		gdk_flush();
+		gdk_threads_leave();
 	}	
 }
 
@@ -76,7 +80,9 @@ void main_gui (int argc, char *argv[])
 {
 	GladeXML *xml;
 	GtkWidget *window;
-		
+	
+	g_thread_init(0);
+	gdk_threads_init();
 	gtk_init(&argc, &argv);
 	xml = glade_xml_new(GLADEDIR "/window.glade", 0, 0);
 	
@@ -84,7 +90,12 @@ void main_gui (int argc, char *argv[])
 	window = glade_xml_get_widget(xml, "window");
 	treeview = glade_xml_get_widget(xml, "treeview");
 	label = glade_xml_get_widget(xml, "label");
-	
+	train_toolbutton = glade_xml_get_widget(xml, "train_toolbutton");
+	cancel_toolbutton = glade_xml_get_widget(xml, "cancel_toolbutton");
+
+	/* disable cancel button */
+	gtk_widget_set_sensitive(cancel_toolbutton, FALSE);
+
 	/* connect signal handlers */
 	glade_xml_signal_autoconnect(xml);
 
@@ -95,8 +106,10 @@ void main_gui (int argc, char *argv[])
 	/* load files */
 	init_list(treeview);
 	refresh_list(treeview, dir);
-	
+
+	gdk_threads_enter();	
 	gtk_main();
+	gdk_threads_leave();
 }
 
 /*
@@ -185,19 +198,10 @@ void on_window_destroy (GtkObject *object, gpointer user_data)
 /*
  * 
  */
-void *new_clicked (void *arg)
+void on_cancel_toolbutton_clicked (GtkObject *object, gpointer user_data)
 {
-	handshake('n');
-}
-
-/*
- * 
- */
-void on_new_toolbutton_clicked (GtkObject *object, gpointer user_data)
-{
-	pthread_t thread;
-	strcpy(file, "new.model");	
-	pthread_create(&thread, 0, new_clicked, 0);
+	gtk_widget_set_sensitive(cancel_toolbutton, FALSE);
+	gtk_widget_set_sensitive(train_toolbutton, TRUE);
 }
 
 /*
@@ -206,6 +210,7 @@ void on_new_toolbutton_clicked (GtkObject *object, gpointer user_data)
 void *train_clicked (void *arg)
 {
 	handshake('e');
+	return 0;
 }
 
 /*
@@ -223,6 +228,10 @@ void on_train_toolbutton_clicked (GtkObject *object, gpointer user_data)
 		gchar *name;
 		gtk_tree_model_get (model, &iter, COLUMN_NAME, &name, -1);
 
+		/* disable train button and enable cancel button */
+		gtk_widget_set_sensitive(train_toolbutton, FALSE);
+		gtk_widget_set_sensitive(cancel_toolbutton, TRUE);
+		
 		pthread_t thread;
 		strcpy(file, name);
 		pthread_create(&thread, 0, train_clicked, 0);
@@ -242,3 +251,4 @@ void on_refresh_toolbutton_clicked (GtkObject *object, gpointer user_data)
 {
 	refresh_list(treeview, dir);
 }
+

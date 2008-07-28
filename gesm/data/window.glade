@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <!DOCTYPE glade-interface SYSTEM "glade-2.0.dtd">
-<!--Generated with glade3 3.4.5 on Thu Jul 17 16:40:29 2008 -->
+<!--Generated with glade3 3.4.5 on Mon Jul 28 19:13:54 2008 -->
 <glade-interface>
   <widget class="GtkWindow" id="window">
     <property name="title" translatable="yes">Gesture Manager</property>
@@ -12,22 +12,22 @@
           <widget class="GtkToolbar" id="toolbar">
             <property name="visible">True</property>
             <child>
-              <widget class="GtkToolButton" id="new_toolbutton">
+              <widget class="GtkToolButton" id="train_toolbutton">
                 <property name="visible">True</property>
-                <property name="label" translatable="yes">New</property>
-                <property name="stock_id">gtk-new</property>
-                <signal name="clicked" handler="on_new_toolbutton_clicked"/>
+                <property name="label" translatable="yes">Train</property>
+                <property name="stock_id">gtk-edit</property>
+                <signal name="clicked" handler="on_train_toolbutton_clicked"/>
               </widget>
               <packing>
                 <property name="expand">False</property>
               </packing>
             </child>
             <child>
-              <widget class="GtkToolButton" id="train_toolbutton">
+              <widget class="GtkToolButton" id="cancel_toolbutton">
                 <property name="visible">True</property>
-                <property name="label" translatable="yes">Train</property>
-                <property name="stock_id">gtk-edit</property>
-                <signal name="clicked" handler="on_train_toolbutton_clicked"/>
+                <property name="label" translatable="yes">Cancel</property>
+                <property name="stock_id">gtk-cancel</property>
+                <signal name="clicked" handler="on_cancel_toolbutton_clicked"/>
               </widget>
               <packing>
                 <property name="expand">False</property>
