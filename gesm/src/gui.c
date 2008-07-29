@@ -41,8 +41,7 @@ enum
 };
 
 static GtkWidget *label = 0;
-static GtkWidget *treeview;
-static GtkWidget *cancel_toolbutton = 0;
+static GtkWidget *treeview = 0;
 static GtkWidget *train_toolbutton = 0;
 /* this is the thread that is used for training */
 static pthread_t thread;
@@ -57,8 +56,6 @@ static void init_list (GtkWidget *list);
 static void refresh_list (GtkWidget *list, char *dir);
 /* */
 void on_window_destroy (GtkObject *object, gpointer user_data);
-/* */
-void on_cancel_toolbutton_clicked (GtkObject *object, gpointer user_data);
 /* */
 void *train_clicked (void *arg);
 /* */
@@ -78,7 +75,6 @@ void update_gui(char *msg)
 		if ((strcmp(msg, "Disconnected") == 0) ||
 			(strcmp(msg, "Closed") == 0)) {
 			update_gui("Training was canceled");
-			gtk_widget_set_sensitive(cancel_toolbutton, FALSE);
 			gtk_widget_set_sensitive(train_toolbutton, TRUE);
 		}
 	}	
@@ -100,10 +96,6 @@ void main_gui (int argc, char *argv[])
 	treeview = glade_xml_get_widget(xml, "treeview");
 	label = glade_xml_get_widget(xml, "label");
 	train_toolbutton = glade_xml_get_widget(xml, "train_toolbutton");
-	cancel_toolbutton = glade_xml_get_widget(xml, "cancel_toolbutton");
-
-	/* disable cancel button */
-	gtk_widget_set_sensitive(cancel_toolbutton, FALSE);
 
 	/* connect signal handlers */
 	glade_xml_signal_autoconnect(xml);
@@ -207,17 +199,6 @@ void on_window_destroy (GtkObject *object, gpointer user_data)
 /*
  * 
  */
-void on_cancel_toolbutton_clicked (GtkObject *object, gpointer user_data)
-{
-	pthread_cancel(thread);
-	update_gui("Training was canceled");
-	gtk_widget_set_sensitive(cancel_toolbutton, FALSE);
-	gtk_widget_set_sensitive(train_toolbutton, TRUE);
-}
-
-/*
- * 
- */
 void *train_clicked (void *arg)
 {
 	handshake('e');
@@ -241,7 +222,6 @@ void on_train_toolbutton_clicked (GtkObject *object, gpointer user_data)
 
 		/* disable train button and enable cancel button */
 		gtk_widget_set_sensitive(train_toolbutton, FALSE);
-		gtk_widget_set_sensitive(cancel_toolbutton, TRUE);
 		
 		strcpy(file, name);
 		pthread_create(&thread, 0, train_clicked, 0);

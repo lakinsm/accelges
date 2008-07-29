@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <!DOCTYPE glade-interface SYSTEM "glade-2.0.dtd">
-<!--Generated with glade3 3.4.5 on Mon Jul 28 19:13:54 2008 -->
+<!--Generated with glade3 3.4.5 on Tue Jul 29 18:19:08 2008 -->
 <glade-interface>
   <widget class="GtkWindow" id="window">
     <property name="title" translatable="yes">Gesture Manager</property>
@@ -17,17 +17,6 @@
                 <property name="label" translatable="yes">Train</property>
                 <property name="stock_id">gtk-edit</property>
                 <signal name="clicked" handler="on_train_toolbutton_clicked"/>
-              </widget>
-              <packing>
-                <property name="expand">False</property>
-              </packing>
-            </child>
-            <child>
-              <widget class="GtkToolButton" id="cancel_toolbutton">
-                <property name="visible">True</property>
-                <property name="label" translatable="yes">Cancel</property>
-                <property name="stock_id">gtk-cancel</property>
-                <signal name="clicked" handler="on_cancel_toolbutton_clicked"/>
               </widget>
               <packing>
                 <property name="expand">False</property>
