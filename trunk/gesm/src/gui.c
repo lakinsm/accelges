@@ -74,7 +74,6 @@ void update_gui(char *msg)
 		/* kinf of ugly way to know that the other thread has been canceled, or has finished processing, but works */
 		if ((strcmp(msg, "Disconnected") == 0) ||
 			(strcmp(msg, "Closed") == 0)) {
-			update_gui("Training was canceled");
 			gtk_widget_set_sensitive(train_toolbutton, TRUE);
 		}
 	}	

@@ -3,7 +3,7 @@ SECTION = "openmoko/utilities"
 
 PN = "accelges"
 PV = "0.1.0+svnr${SRCREV}"
-PR = "r5"
+PR = "r9"
 
 SRC_URI = "svn://accelges.googlecode.com/svn;module=trunk;proto=https"
 
@@ -18,6 +18,9 @@ do_install_append() {
 	install -c -D -m 644 ${S}/config/neo3/* ${D}${sysconfdir}/accelges/neo3
 	install -d ${D}${sysconfdir}/accelges/wii
 	install -c -D -m 644 ${S}/config/wii/* ${D}${sysconfdir}/accelges/wii
+	
+	install -d ${D}${sysconfdir}/init.d
+	install -c -D -m 755 ${S}/config/init.d/* ${D}${sysconfdir}/init.d/
 }
 
 FILES_${PN} += ${datadir}
