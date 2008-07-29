@@ -1,0 +1,40 @@
+#! /bin/sh
+#
+# gesd -- This shell script starts and stops the gesture recognizer daemon.
+#
+# chkconfig: 345 90 20
+# description: gesd is the gesture recognizer daemon
+# processname: gesd
+
+PATH=/bin:/usr/bin:/sbin:/usr/sbin
+NAME=gesd-neo2.sh
+
+[ -f /etc/default/rcS ] && . /etc/default/rcS
+
+case "$1" in
+    start)
+        echo -n "Starting gesd-neo2 daemon: "
+        start-stop-daemon --start --pidfile /var/run/${NAME}.pid --make-pidfile --background -x /usr/bin/${NAME}
+        if [ $? = 0 ]; then
+            echo "(ok)"
+        else
+            echo "(failed)"
+        fi
+        ;;
+    stop)
+        echo -n "Stopping gesd-neo2 daemon: "
+        start-stop-daemon --stop --pidfile /var/run/${NAME}.pid --oknodo
+        rm -f /var/run/${NAME}.pid
+        echo "(done)"
+        ;;
+    restart|force-reload)
+        $0 stop
+        $0 start
+        ;;
+    *)
+        echo "Usage: /etc/init.d/gesd-neo2 {start|stop|restart|force-reload}"
+        exit 1
+        ;;
+esac
+
+exit 0
