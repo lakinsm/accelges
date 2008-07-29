@@ -11,8 +11,11 @@ S = "${WORKDIR}/trunk"
 
 inherit autotools update-rc.d
 
-INITSCRIPT_NAME = "gesd-neo2"
-INITSCRIPT_PARAMS = "defaults 70"
+INITSCRIPT_PACKAGES = "gesd gesl"
+INITSCRIPT_NAME_gesd = "gesd-neo2"
+INITSCRIPT_PARAMS_gesd = "defaults 70"
+INITSCRIPT_NAME_gesl = "gesl"
+INITSCRIPT_PARAMS_gesl = "defaults 71"
 
 do_install_append() {
 	install -d ${D}${sysconfdir}/accelges/neo2
