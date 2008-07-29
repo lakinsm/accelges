@@ -44,6 +44,8 @@ static GtkWidget *label = 0;
 static GtkWidget *treeview;
 static GtkWidget *cancel_toolbutton = 0;
 static GtkWidget *train_toolbutton = 0;
+/* this is the thread that is used for training */
+static pthread_t thread;
 
 /* */
 static void add_to_list (GtkWidget *list, const gchar *str);
@@ -72,6 +74,13 @@ void update_gui(char *msg)
 		gtk_label_set_text(GTK_LABEL (label), msg);
 		gdk_flush();
 		gdk_threads_leave();
+		/* kinf of ugly way to know that the other thread has been canceled, or has finished processing, but works */
+		if ((strcmp(msg, "Disconnected") == 0) ||
+			(strcmp(msg, "Closed"))) {
+			update_gui("Training was canceled");
+			gtk_widget_set_sensitive(cancel_toolbutton, FALSE);
+			gtk_widget_set_sensitive(train_toolbutton, TRUE);
+		}
 	}	
 }
 
@@ -200,6 +209,8 @@ void on_window_destroy (GtkObject *object, gpointer user_data)
  */
 void on_cancel_toolbutton_clicked (GtkObject *object, gpointer user_data)
 {
+	pthread_cancel(thread);
+	update_gui("Training was canceled");
 	gtk_widget_set_sensitive(cancel_toolbutton, FALSE);
 	gtk_widget_set_sensitive(train_toolbutton, TRUE);
 }
@@ -232,7 +243,6 @@ void on_train_toolbutton_clicked (GtkObject *object, gpointer user_data)
 		gtk_widget_set_sensitive(train_toolbutton, FALSE);
 		gtk_widget_set_sensitive(cancel_toolbutton, TRUE);
 		
-		pthread_t thread;
 		strcpy(file, name);
 		pthread_create(&thread, 0, train_clicked, 0);
 
@@ -240,7 +250,7 @@ void on_train_toolbutton_clicked (GtkObject *object, gpointer user_data)
 	}
 	else
 	{
-		g_print ("no row selected.\n");
+		update_gui ("Please select a model first");
 	}
 }
 
