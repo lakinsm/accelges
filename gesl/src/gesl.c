@@ -90,7 +90,7 @@ int main (int argc, char **argv)
 	
 	loop = g_main_loop_new (0, FALSE);
 
-	conn = dbus_g_bus_get (DBUS_BUS_SESSION, &error);
+	conn = dbus_g_bus_get (DBUS_BUS_SYSTEM, &error);
 	if (conn == 0) {
 		g_error("%s", error->message);
 		g_error_free(error);
