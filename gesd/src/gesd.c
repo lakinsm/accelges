@@ -37,8 +37,8 @@
 #include "service.h"
 
 #define VERSION "0.1"
-#define DBUS_SERVICE_NAME "org.openmoko.gestures"
-#define DBUS_RECOGNIZER_PATH "/org/openmoko/gestures/Recognizer"
+#define DBUS_SERVICE_NAME "org.openmoko.accelges"
+#define DBUS_RECOGNIZER_PATH "/org/openmoko/accelges/Recognizer"
 
 /* boilerplate for glib */
 G_DEFINE_TYPE(Recognizer, recognizer, G_TYPE_OBJECT)

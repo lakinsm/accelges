@@ -53,7 +53,7 @@ G_BEGIN_DECLS
 #endif /* !G_ENABLE_DEBUG */
 
 
-/* BOOLEAN:BOOLEAN,POINTER (/tmp/dbus-binding-tool-c-marshallers.IZQTEU:1) */
+/* BOOLEAN:BOOLEAN,POINTER (/tmp/dbus-binding-tool-c-marshallers.6OBIFU:1) */
 extern void dbus_glib_marshal_recognizer_BOOLEAN__BOOLEAN_POINTER (GClosure     *closure,
                                                                    GValue       *return_value,
                                                                    guint         n_param_values,
@@ -113,8 +113,8 @@ const DBusGObjectInfo dbus_glib_recognizer_object_info = {
   0,
   dbus_glib_recognizer_methods,
   1,
-"org.openmoko.gestures.Recognizer\0Listen\0S\0enable\0I\0b\0\0\0",
-"org.openmoko.gestures.Recognizer\0Recognized\0\0",
+"org.openmoko.accelges.Recognizer\0Listen\0S\0enable\0I\0b\0\0\0",
+"org.openmoko.accelges.Recognizer\0Recognized\0\0",
 "\0"
 };
 
