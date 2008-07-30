@@ -7,6 +7,7 @@ AM_CFLAGS = \
 lib_LTLIBRARIES = libges.la
 
 libges_la_SOURCES = \
+	src/accel.c \
 	src/class.c \
 	src/gauss.c \
 	src/ges.c \
