@@ -1,11 +1,10 @@
 [Desktop Entry]
-Encoding=UTF-8
 Name=Gesture Manager
 Comment=Train gestures
 Exec=gesm-neo2.sh
 Icon=applications-games
 Terminal=false
 Type=Application
-Categories=GTK;Application;Utility
+Categories=GTK;Application;Utility;
 SingleInstance=true
 StartupNotify=true
