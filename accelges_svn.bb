@@ -3,7 +3,7 @@ SECTION = "openmoko/utilities"
 
 PN = "accelges"
 PV = "0.1.0+svnr${SRCREV}"
-PR = "r2"
+PR = "r6"
 
 SRC_URI = "svn://accelges.googlecode.com/svn;module=trunk;proto=https"
 
@@ -24,8 +24,10 @@ do_install_append() {
 	
 	install -d ${D}${sysconfdir}/init.d
 	install -c -D -m 755 ${S}/config/init.d/* ${D}${sysconfdir}/init.d/
+
+	install -d ${D}${sysconfdir}/dbus-1/system.d
+	install -c -D -m 644 ${S}/gesd/data/accelges.conf ${D}${sysconfdir}/dbus-1/system.d
 }
 
 FILES_${PN} += ${datadir}
-FILES_${PN} += ${sysconfdir}
 

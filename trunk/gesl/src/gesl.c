@@ -26,9 +26,9 @@
 
 #include "service.h"
 
-#define DBUS_SERVICE_NAME "org.openmoko.gestures"
-#define DBUS_RECOGNIZER_PATH "/org/openmoko/gestures/Recognizer"
-#define DBUS_RECOGNIZER_NAME "org.openmoko.gestures.Recognizer"
+#define DBUS_SERVICE_NAME "org.openmoko.accelges"
+#define DBUS_RECOGNIZER_PATH "/org/openmoko/accelges/Recognizer"
+#define DBUS_RECOGNIZER_NAME "org.openmoko.accelges.Recognizer"
 
 /*
  * 
@@ -107,7 +107,7 @@ int main (int argc, char **argv)
 		exit(2);
 	}
 	
-	if (!org_openmoko_gestures_Recognizer_listen (proxy, TRUE, &error)) {
+	if (!org_openmoko_accelges_Recognizer_listen (proxy, TRUE, &error)) {
 		g_error("%s", error->message);
 		g_error_free(error);
 		exit(3);

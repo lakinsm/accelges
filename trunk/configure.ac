@@ -31,7 +31,6 @@ accelneo/makefile
 accelwii/makefile
 ges/makefile
 gesd/makefile
-gesd/data/org.openmoko.gestures.service
 gesl/makefile
 gesm/makefile
 ])
