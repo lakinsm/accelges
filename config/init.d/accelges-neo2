@@ -1,2 +1,2 @@
-gesd-neo2 $@
-gesl $@
+/etc/init.d/gesd-neo2 $@
+/etc/init.d/gesl $@
