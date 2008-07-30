@@ -3,7 +3,7 @@ SECTION = "openmoko/utilities"
 
 PN = "accelges"
 PV = "0.1.0+svnr${SRCREV}"
-PR = "r6"
+PR = "r1"
 
 SRC_URI = "svn://accelges.googlecode.com/svn;module=trunk;proto=https"
 
@@ -11,16 +11,16 @@ S = "${WORKDIR}/trunk"
 
 inherit autotools update-rc.d
 
-PACKAGES += "${PN}-cmd"
+#PACKAGES += "${PN}-cmd"
 
-INITSCRIPT_PACKAGES = "${PN} ${PN}-cmd"
-INITSCRIPT_NAME_${PN} = "gesd-neo2"
-INITSCRIPT_PARAMS_${PN} = "defaults 70"
-INITSCRIPT_NAME_${PN}-cmd = "gesl" 
-INITSCRIPT_PARAMS_${PN}-cmd = "defaults 80"
+#INITSCRIPT_PACKAGES = "${PN} ${PN}-cmd"
+#INITSCRIPT_NAME_${PN} = "gesd-neo2"
+#INITSCRIPT_PARAMS_${PN} = "defaults 70"
+#INITSCRIPT_NAME_${PN}-cmd = "gesl" 
+#INITSCRIPT_PARAMS_${PN}-cmd = "defaults 80"
 
-#INITSCRIPT_NAME = "gesd-neo2"
-#INITSCRIPT_PARAMS = "defaults 70"
+INITSCRIPT_NAME = "accelges-neo2"
+INITSCRIPT_PARAMS = "defaults 70"
 
 do_install_append() {
 	install -d ${D}${sysconfdir}/accelges/neo2
