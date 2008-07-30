@@ -97,6 +97,7 @@ void *main_dbus(void *arg)
 	g_type_init();
 	loop = g_main_loop_new(0, FALSE);
 
+	/* connect to system bus */
 	conn = dbus_g_bus_get(DBUS_BUS_SYSTEM, &error);
 	if (conn == 0) {
 		g_error("%s", error->message);
