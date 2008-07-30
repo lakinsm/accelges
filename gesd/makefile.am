@@ -15,9 +15,9 @@ bin_PROGRAMS = gesd
 #service_DATA = \
 #	data/org.openmoko.gestures.service
 
-systemdir = $(datadir)/dbus-1/system.d
-system_DATA = \
-	data/accelges.conf
+#systemdir = $(datadir)/dbus-1/system.d
+#system_DATA = \
+#	data/accelges.conf
 	
 gesd_SOURCES = \
 	src/gesd.c
