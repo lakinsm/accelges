@@ -27,6 +27,7 @@
 #include <unistd.h>
 #include <pthread.h>
 
+#include "accel.h"
 #include "accelneo.h"
 #include "accelwii.h"
 #include "gauss.h"
@@ -70,6 +71,16 @@ static void neo_signal_cb(int signal);
 static void dev_close(enum device dev);
 /* */
 static void cmd_accel_cb(unsigned char pressed, struct accel_3d_t accel);
+/* */
+static void cmd_accel_view_begin(char *file);
+/* */
+static void cmd_accel_view_end(char *file);
+/* */
+static void cmd_record_begin(char *file);
+/* */
+static void cmd_record_cb(unsigned char pressed, struct accel_3d_t accel);
+/* */
+static void cmd_record_end(char *file);
 /* */
 static void cmd_class_cb(unsigned char pressed, struct accel_3d_t accel);
 /* */
@@ -128,6 +139,7 @@ int main(int argc, char *argv[])
 		{ "new", required_argument, 0, 'n' },
 		{ "view", required_argument, 0, 'o' },
 		{ "train", required_argument, 0, 'e' },
+		{ "record", required_argument, 0, 'r' },
 		{ "verbose", no_argument, 0, 'p' },
 		{ "confirm", no_argument, 0, 'c' },
 		{ "version", no_argument, 0, 'v' },
@@ -142,7 +154,7 @@ int main(int argc, char *argv[])
 	verbose = 0;
 	confirm = 0;
 	opterr = 0;
-	while ((long_opt_val = getopt_long(argc, argv, "wqzd:gan:o:e:pcvh", long_opts, &long_opt_ind)) != -1) 
+	while ((long_opt_val = getopt_long(argc, argv, "wqzd:gan:o:e:rpcvh", long_opts, &long_opt_ind)) != -1) 
 	{
 		switch (long_opt_val)
 		{
@@ -162,6 +174,7 @@ int main(int argc, char *argv[])
 			case 'n': /* --new */
 			case 'o': /* --view */
 			case 'e': /* --train */
+			case 'r': /* --record */
 				strncpy(file, optarg, sizeof(file));
 				file[sizeof(file) / sizeof(file[0]) - 1] = '\0';
 			case 'g': /* --gui */
@@ -247,6 +260,7 @@ void handshake(char cmd)
 				}
 				wii_set_leds(&wii, 0, 0, 0, 1);
 			
+				signal(SIGALRM, wii_signal_cb);
 				signal(SIGINT, wii_signal_cb);
 				signal(SIGTERM, wii_signal_cb);
 				break;
@@ -262,6 +276,7 @@ void handshake(char cmd)
 					update_gui("Connected");
 				}
 				
+				signal(SIGALRM, neo_signal_cb);
 				signal(SIGINT, neo_signal_cb);
 				signal(SIGTERM, neo_signal_cb);
 				break;
@@ -277,6 +292,7 @@ void handshake(char cmd)
 					update_gui("Connected");
 				}
 				
+				signal(SIGALRM, neo_signal_cb);
 				signal(SIGINT, neo_signal_cb);
 				signal(SIGTERM, neo_signal_cb);
 				break;
@@ -296,6 +312,12 @@ void handshake(char cmd)
 			chdir(dir);
 			wii.handle_recv = cmd_accel_cb;
 			neo.handle_recv = cmd_accel_cb;
+			break;
+		case 'r': /* --record */
+			chdir(dir);
+			wii.handle_recv = cmd_record_cb;
+			neo.handle_recv = cmd_record_cb;
+			cmd_record_begin(file);
 			break;
 		case 'n': /* --new */
 		case 'o': /* --view */
@@ -335,6 +357,16 @@ void handshake(char cmd)
 					neo.handle_recv = cmd_model_cb;
 					handle_model = cmd_model_train_cb;
 					cmd_model_train_begin(file);
+				}
+			} else if ((p) && (strcmp(p, ".accel") == 0)) { /* accel */
+				if (cmd == 'o') { /* --view accel */
+					wii.handle_recv = 0;
+					neo.handle_recv = 0;
+					cmd_accel_view_begin(file);
+				} else {
+					fprintf(stderr, "Unsupported operation for this type of file\n");
+					fflush(stderr);
+					exit(2);
 				}
 			} else { /* unknown */
 				fprintf(stderr, "Unrecognized file extension (has to be .class or .model).\n");
@@ -393,14 +425,15 @@ static void print_usage(void)
 		"   or: gesm --version\n"
 		"   or: gesm --help\n"
 		"Commands:\n"
-		"   --gui       \tshows a graphical user interface\n"
-		"   --accel     \tshows recorded acceleration values\n"
-		"   --new   FILE\tcreates a new class (.class) or model (.model)\n"
-		"   --view  FILE\tvisualizes a class (.class) or model (.model)\n"
-		"   --train FILE\ttrains a class (.class) or model (.model)\n"
+		"   --gui        \tshows a graphical user interface\n"
+		"   --accel      \tprints acceleration values on screen\n"
+		"   --new    FILE\tcreates a new class (.class) or model (.model)\n"
+		"   --view   FILE\tvisualizes a class (.class) or model (.model)\n"
+		"   --train  FILE\ttrains a class (.class) or model (.model)\n"
+		"   --record FILE\tsaves acceleration values to file (.accel)\n"
 		"Options:\n"
-		"   --verbose   \tdisplays additional information\n"
-		"   --confirm   \tasks confirmation for save\n"
+		"   --verbose    \tdisplays additional information\n"
+		"   --confirm    \tasks confirmation for save\n"
 		"Remarks:\n"
 		"   neo2 refers to the top accelerometer, and\n"
 		"   neo3 refers to the bottom accelerometer;\n");
@@ -414,6 +447,8 @@ static void wii_signal_cb(int signal)
 {
 	switch (signal)
 	{
+		case SIGALRM:
+			cmd_record_end(file);
 		case SIGINT:
 		case SIGTERM:
 			dev_close(dev_wii);
@@ -432,6 +467,8 @@ static void neo_signal_cb(int signal)
 {
 	switch (signal)
 	{
+		case SIGALRM:
+			cmd_record_end(file);
 		case SIGINT:
 		case SIGTERM:
 			dev_close(dev_neo2); /* or dev_neo3 */
@@ -475,6 +512,76 @@ static void cmd_accel_cb(unsigned char pressed, struct accel_3d_t accel)
 		printf("%+f\t%+f\t%+f\n", accel.val[0], accel.val[1], accel.val[2]);
 		fflush(stdout);
 	}	
+}
+
+/*
+ *
+ */
+static void cmd_record_cb(unsigned char pressed, struct accel_3d_t accel)
+{
+	seq.each[seq.index++] = accel;
+	if (pressed) {
+		printf("%+f\t%+f\t%+f\n", accel.val[0], accel.val[1], accel.val[2]);
+		fflush(stdout);
+	}
+}
+
+/*
+ *
+ */
+static void cmd_accel_view_begin(char *file)
+{
+	accel_read_3d(&seq, file);
+
+	cmd_accel_view_end(file);
+}
+
+/*
+ *
+ */
+static void cmd_accel_view_end(char *file)
+{
+	int i;
+	for (i = seq.begin; i <= seq.end; i++)
+	{
+		printf("%+f\t%+f\t%+f\n", seq.each[i].val[0], 
+			seq.each[i].val[1], seq.each[i].val[2]);
+		fflush(stdout);
+	}
+}
+
+/*
+ *
+ */
+static void cmd_record_begin(char *file)
+{
+	unsigned int seconds = 7;
+	printf("Acceleration values will be recorded for %d seconds\n", seconds);
+	fflush(stdout);
+
+	seq.begin = 0;
+	seq.index = 0;
+	seq.end = 0;
+
+	/* set an alarm for 7 seconds */
+	alarm(seconds);
+}
+
+/*
+ *
+ */
+static void cmd_record_end(char *file)
+{
+	if (seq.end == 0) {
+		fprintf(stderr, "Sorry, your accelerometer doesn't seem to work\n"
+			"No value was recorded; values weren't saved to file!\n");
+		fflush(stderr);
+	} else {
+		seq.end = seq.index - 1;
+		accel_write_3d(&seq, file);
+		printf("Acceleration values were successfully saved to '%s'\n", file);
+		fflush(stdout);
+	}
 }
 
 /*
