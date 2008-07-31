@@ -7,17 +7,21 @@ AM_CFLAGS = \
 	-I${top_srcdir}/ges/include \
 	-I/usr/local/openmoko/arm/include \
 	`pkg-config --cflags gtk+-2.0 libglade-2.0 gthread-2.0` \
+	`curl-config --cflags` \
 	${ALL_CFLAGS}
 
 bin_PROGRAMS = gesm
 
 gesm_SOURCES = \
 	src/gesm.c \
-	src/gui.c
+	src/gui.c \
+	src/send.c
 
 bin_SCRIPTS = \
 	scripts/gesm-neo2.sh \
-	scripts/gesm-neo3.sh
+	scripts/gesm-neo3.sh \
+	scripts/rec-neo2.sh \
+	scripts/rec-neo3.sh
 
 gladedir = $(datadir)/gesm
 glade_DATA = \
@@ -44,4 +48,5 @@ gesm_LDFLAGS = \
 	-L$(top_builddir)/accelneo \
 	-L$(top_builddir)/accelwii \
 	-L$(top_builddir)/ges \
-	`pkg-config --libs gtk+-2.0 libglade-2.0 gthread-2.0` -export-dynamic
+	`pkg-config --libs gtk+-2.0 libglade-2.0 gthread-2.0` -export-dynamic \
+	`curl-config --libs`
