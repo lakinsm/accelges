@@ -33,6 +33,7 @@
 #include "gesd.h"
 #include "accelneo.h"
 #include "accelwii.h"
+#include "accelsim.h"
 #include "recognizer.h"
 #include "service.h"
 
@@ -42,13 +43,16 @@
 
 /* boilerplate for glib */
 G_DEFINE_TYPE(Recognizer, recognizer, G_TYPE_OBJECT)
-static GObject *reco;
+static GObject *reco = 0;
 static guint reco_signal;
 
 /* neo or wii use ges */
 static struct neo_t neo;
 static struct wii_t wii;
+static struct sim_t sim;
 static struct ges_3d_t ges;
+
+static char sim_filename[512];
 
 /*
  * 
@@ -136,11 +140,13 @@ void *main_dbus(void *arg)
  */
 void recognized_cb(char *id)
 {
-	//printf("Recognized: %s\n", id);
-	//fflush(stdout);
+	printf("Recognized: %s\n", id);
+	fflush(stdout);
 	
 	/* call dbus signal */
-	g_signal_emit(G_OBJECT(reco), reco_signal, 0, id); 
+	if (reco) {
+		g_signal_emit(G_OBJECT(reco), reco_signal, 0, id); 
+	}
 }
 
 /*
@@ -161,6 +167,7 @@ static void print_usage(void)
 	printf("Usage: gesd --wii  --config FILE\n"
 		"   or: gesd --neo2 --config FILE\n"
 		"   or: gesd --neo3 --config FILE\n"
+		"   or: gesd --sim .accel --config FILE\n"
 		"   or: gesd --version\n"
 		"   or: gesd --help\n"
 		"Remarks:\n"
@@ -216,6 +223,28 @@ static void neo_signal_cb(int signal)
 			/* clean mem */
 			ges_delete_3d(&ges);
 			
+			exit(0);
+			break;
+		default:
+			break;
+	}
+}
+
+/*
+ *
+ */
+static void sim_signal_cb(int signal)
+{
+	switch (signal)
+	{
+		case SIGINT:
+		case SIGTERM:
+			sim_close(&sim);
+			printf("Closed.\n");
+			fflush(stdout);
+			/* cleanup */
+			ges_delete_3d(&ges);
+
 			exit(0);
 			break;
 		default:
@@ -299,6 +328,18 @@ static unsigned char handshake(enum device dev)
 			signal(SIGINT, neo_signal_cb);
 			signal(SIGTERM, neo_signal_cb);
 			break;
+		case dev_sim: /* --sim */
+			if (!sim_open(&sim, sim_filename)) {
+				fprintf(stderr, "Could not read simulation file.\n");
+				fflush(stderr);
+				return 0;
+			}
+			printf("Opened.\n");
+			fflush(stdout);
+
+			signal(SIGINT, sim_signal_cb);
+			signal(SIGTERM, sim_signal_cb);
+			break;
 		case dev_none:
 			return 0;
 			break;
@@ -327,6 +368,7 @@ int main(int argc, char **argv)
 		{ "wii", no_argument, 0, 'w' },
 		{ "neo2", no_argument, 0, 'q' },
 		{ "neo3", no_argument, 0, 'z' },
+		{ "sim", required_argument, 0, 's' },
 		{ "config", required_argument, 0, 'c' },
 		{ "version", no_argument, 0, 'v' },
 		{ "help", no_argument, 0, 'h' },
@@ -352,6 +394,12 @@ int main(int argc, char **argv)
 				break;
 			case 'z': /* --neo3 */
 				dev_arg = (dev_arg == dev_none) ? dev_neo3 : dev_arg;
+				break;
+			case 's': /* --sim */
+				dev_arg = (dev_arg == dev_none) ? dev_sim : dev_arg;
+
+				strncpy(sim_filename, optarg, sizeof(sim_filename));
+				sim_filename[sizeof(sim_filename) / sizeof(sim_filename[0]) - 1] = '\0';
 				break;
 			case 'c': /* --config */
 				strncpy(config_arg, optarg, sizeof(config_arg));
@@ -405,6 +453,9 @@ int main(int argc, char **argv)
 		neo.handle_recv = received_cb;
 		/* begin read loop */
 		neo_begin_read(&neo);
+	} else if (dev_arg == dev_sim) {
+		sim.handle_recv = received_cb;
+		sim_begin_read(&sim);
 	} else {
 		exit(4);
 	}

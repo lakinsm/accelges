@@ -25,7 +25,7 @@
 
 typedef enum device {
 	dev_none = 0,
-	dev_wii, dev_neo2, dev_neo3
+	dev_wii, dev_neo2, dev_neo3, dev_sim
 } device;
 
 #endif /*GESD_H_*/
