@@ -29,6 +29,7 @@ AC_OUTPUT([
 makefile
 accelneo/makefile
 accelwii/makefile
+accelsim/makefile
 ges/makefile
 gesd/makefile
 gesl/makefile

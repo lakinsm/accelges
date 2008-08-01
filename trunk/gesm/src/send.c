@@ -9,7 +9,6 @@
 
 #include "send.h"
 
-#define LOCAL_FILE "/tmp/uploadthis.txt"
 #define UPLOAD_FILE_AS "while-uploading.txt"
 #define REMOTE_URL "ftp://ftp.borza.ro" UPLOAD_FILE_AS
 #define RENAME_FILE_TO "renamed-and-fine.txt"
@@ -23,7 +22,7 @@ static size_t read_callback(void *ptr, size_t size, size_t nmemb, void *stream)
 unsigned char upload(char *filename)
 {
 	CURL *curl;
-	CURLcode res;
+	CURLcode res = 1;
 	FILE *hd_src;
 	struct stat file_info;
 
@@ -32,14 +31,14 @@ unsigned char upload(char *filename)
 	static const char buf_2 [] = "RNTO " RENAME_FILE_TO;
 
 	/* get the file size of the local file */
-	if (stat(LOCAL_FILE, &file_info)) {
-		printf("Couldn't open '%s': %s\n", LOCAL_FILE, strerror(errno));
+	if (stat(filename, &file_info)) {
+		printf("Couldn't open '%s': %s\n", filename, strerror(errno));
 		return 0;
 	}
 	printf("Local file size: %1d bytes.\n", file_info.st_size);
 
 	/* get a FILE * of the same file */
-	hd_src = fopen(LOCAL_FILE, "rb");
+	hd_src = fopen(filename, "rb");
 
 	curl_global_init(CURL_GLOBAL_ALL);
 
@@ -86,6 +85,6 @@ unsigned char upload(char *filename)
 
 	curl_global_cleanup();
 
-	return 1;
+	return (res == 0);
 }
 

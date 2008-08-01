@@ -1,0 +1,12 @@
+# (C) 2008 OpenMoko Inc. Paul-Valentin Borza
+
+AM_CFLAGS = \
+	-Iinclude \
+	-I${top_srcdir}/ges/include \
+	${ALL_CFLAGS}
+
+lib_LTLIBRARIES = libaccelsim.la
+
+libaccelsim_la_SOURCES = \
+	src/accelsim.c
+
