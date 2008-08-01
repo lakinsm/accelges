@@ -27,9 +27,11 @@
 #include <unistd.h>
 #include <pthread.h>
 
+#include "send.h"
 #include "accel.h"
 #include "accelneo.h"
 #include "accelwii.h"
+#include "accelsim.h"
 #include "gauss.h"
 #include "ges.h"
 #include "gesm.h"
@@ -41,6 +43,9 @@ static enum ui_mode g_mode;
 
 static struct neo_t neo;
 static struct wii_t wii;
+static struct sim_t sim;
+
+static char sim_filename[512];
 
 static struct seq_3d_t seq;
 static struct class_2c_t endpoint;
@@ -67,6 +72,8 @@ static void print_usage(void);
 static void wii_signal_cb(int signal);
 /* */
 static void neo_signal_cb(int signal);
+/* */
+static void sim_signal_cb(int signal);
 /* */
 static void dev_close(enum device dev);
 /* */
@@ -125,7 +132,8 @@ static unsigned char do_confirm(void);
 int main(int argc, char *argv[])
 {
 	char cmd = '_';
-	
+	unsigned char no_header = 0;
+
 	int long_opt_ind = 0;
 	int long_opt_val = 0;
 	
@@ -133,6 +141,7 @@ int main(int argc, char *argv[])
 		{ "wii", no_argument, 0, 'w' },
 		{ "neo2", no_argument, 0, 'q' },
 		{ "neo3", no_argument, 0, 'z' },
+		{ "sim", required_argument, 0, 's' },
 		{ "config", required_argument, 0, 'd' },
 		{ "gui", no_argument, 0, 'g' },
 		{ "accel", no_argument, 0, 'a' },
@@ -140,8 +149,10 @@ int main(int argc, char *argv[])
 		{ "view", required_argument, 0, 'o' },
 		{ "train", required_argument, 0, 'e' },
 		{ "record", required_argument, 0, 'r' },
+		{ "upload", required_argument, 0, 'u' },
 		{ "verbose", no_argument, 0, 'p' },
 		{ "confirm", no_argument, 0, 'c' },
+		{ "no-header", no_argument, 0, 'H' },
 		{ "version", no_argument, 0, 'v' },
 		{ "help", no_argument, 0, 'h' },
 		{ 0, 0, 0, 0 }
@@ -154,7 +165,7 @@ int main(int argc, char *argv[])
 	verbose = 0;
 	confirm = 0;
 	opterr = 0;
-	while ((long_opt_val = getopt_long(argc, argv, "wqzd:gan:o:e:rpcvh", long_opts, &long_opt_ind)) != -1) 
+	while ((long_opt_val = getopt_long(argc, argv, "wqzsd:gan:o:e:rupcHvh", long_opts, &long_opt_ind)) != -1) 
 	{
 		switch (long_opt_val)
 		{
@@ -167,6 +178,12 @@ int main(int argc, char *argv[])
 			case 'z': /* --neo3 */
 				g_dev = (g_dev == dev_none) ? dev_neo3 : g_dev;
 				break;
+			case 's': /* --sim */
+				g_dev = (g_dev == dev_none) ? dev_sim : g_dev;
+
+				strncpy(sim_filename, optarg, sizeof(sim_filename));
+				sim_filename[sizeof(sim_filename) / sizeof(sim_filename[0]) - 1] = '\0';
+				break;
 			case 'd': /* --config */
 				strncpy(dir, optarg, sizeof(dir));
 				dir[sizeof(dir) / sizeof(dir[0]) - 1] = '\0';
@@ -175,6 +192,7 @@ int main(int argc, char *argv[])
 			case 'o': /* --view */
 			case 'e': /* --train */
 			case 'r': /* --record */
+			case 'u': /* --upload */
 				strncpy(file, optarg, sizeof(file));
 				file[sizeof(file) / sizeof(file[0]) - 1] = '\0';
 			case 'g': /* --gui */
@@ -186,6 +204,9 @@ int main(int argc, char *argv[])
 				break;
 			case 'c': /* --confirm */
 				confirm = 1;
+				break;
+			case 'H': /* no-header */
+				no_header = 1;
 				break;
 			case 'v': /* --version */
 				print_version();
@@ -201,7 +222,9 @@ int main(int argc, char *argv[])
 		}
 	}
 	
-	print_header();
+	if (!no_header) {
+		print_header();
+	}
 		
 	/* minimum requirements */
 	if ((g_dev == dev_none) || (dir[0] == '\0') || (cmd == '_'))
@@ -214,12 +237,22 @@ int main(int argc, char *argv[])
 	{
 		g_mode = graphical;
 		main_gui(argc, argv);
-	}
-	else
-	{
+	} else if (cmd == 'u') { /* --upload */
+		chdir(dir);
+		if (upload(file)) {
+			printf("File '%s' uploaded successfully\n", file);
+			fflush(stdout);
+		} else {
+			fprintf(stderr, "Sorry, could not upload file '%s'\n", file);
+			fflush(stderr);
+			exit(1);
+		}
+	} else {
 		handshake(cmd);
 	}
 			
+	dev_close(g_dev);
+
 	return 0;	
 }
 
@@ -296,6 +329,19 @@ void handshake(char cmd)
 				signal(SIGINT, neo_signal_cb);
 				signal(SIGTERM, neo_signal_cb);
 				break;
+			case dev_sim: /* --sim */
+				if (!sim_open(&sim, sim_filename)) {
+					fprintf(stderr, "Could not read values from simulation file.\n");
+					fflush(stderr);
+					exit(1);
+				}
+				printf("Opened.\n");
+				fflush(stdout);
+
+				signal(SIGALRM, sim_signal_cb);
+				signal(SIGINT, sim_signal_cb);
+				signal(SIGTERM, sim_signal_cb);
+				break;
 			case dev_none:
 				exit(1);
 				break;
@@ -312,11 +358,13 @@ void handshake(char cmd)
 			chdir(dir);
 			wii.handle_recv = cmd_accel_cb;
 			neo.handle_recv = cmd_accel_cb;
+			sim.handle_recv = cmd_accel_cb;
 			break;
 		case 'r': /* --record */
 			chdir(dir);
 			wii.handle_recv = cmd_record_cb;
 			neo.handle_recv = cmd_record_cb;
+			sim.handle_recv = cmd_record_cb;
 			cmd_record_begin(file);
 			break;
 		case 'n': /* --new */
@@ -328,16 +376,19 @@ void handshake(char cmd)
 				if (cmd == 'n') { /* --new class */
 					wii.handle_recv = cmd_class_cb;
 					neo.handle_recv = cmd_class_cb;
+					sim.handle_recv = cmd_class_cb;
 					handle_class = cmd_class_new_cb;
 					cmd_class_new_begin(file);
 				} else if (cmd == 'o') { /* --view class */
 					wii.handle_recv = 0;
 					neo.handle_recv = 0;
+					sim.handle_recv = 0;
 					handle_class = 0;
 					cmd_class_view_begin(file);
 				} else if (cmd == 'e') { /* --train class */
 					wii.handle_recv = cmd_class_cb;
 					neo.handle_recv = cmd_class_cb;
+					sim.handle_recv = cmd_class_cb;
 					handle_class = cmd_class_train_cb;
 					cmd_class_train_begin(file);
 				}
@@ -345,16 +396,19 @@ void handshake(char cmd)
 				if (cmd == 'n') { /* --new model */
 					wii.handle_recv = cmd_model_cb;
 					neo.handle_recv = cmd_model_cb;
+					sim.handle_recv = cmd_model_cb;
 					handle_model = cmd_model_new_cb;
 					cmd_model_new_begin(file);
 				} else if (cmd == 'o') { /* --view model */
 					wii.handle_recv = 0;
 					neo.handle_recv = 0;
+					sim.handle_recv = 0;
 					handle_model = 0;
 					cmd_model_view_begin(file);
 				} else if (cmd == 'e') { /* --train model */
 					wii.handle_recv = cmd_model_cb;
 					neo.handle_recv = cmd_model_cb;
+					sim.handle_recv = cmd_model_cb;
 					handle_model = cmd_model_train_cb;
 					cmd_model_train_begin(file);
 				}
@@ -362,6 +416,7 @@ void handshake(char cmd)
 				if (cmd == 'o') { /* --view accel */
 					wii.handle_recv = 0;
 					neo.handle_recv = 0;
+					sim.handle_recv = 0;
 					cmd_accel_view_begin(file);
 				} else {
 					fprintf(stderr, "Unsupported operation for this type of file\n");
@@ -387,6 +442,9 @@ void handshake(char cmd)
 			case dev_neo2:
 			case dev_neo3:
 				neo_begin_read(&neo);
+				break;
+			case dev_sim:
+				sim_begin_read(&sim);
 				break;
 			case dev_none:
 				exit(1);
@@ -422,18 +480,22 @@ static void print_usage(void)
 	printf("Usage: gesm --wii  --config DIRECTORY COMMAND OPTION\n"
 		"   or: gesm --neo2 --config DIRECTORY COMMAND OPTION\n"
 		"   or: gesm --neo3 --config DIRECTORY COMMAND OPTION\n"
+		"   or: gesm --sim .accel --config DIRECTORY COMMAND OPTION\n"
 		"   or: gesm --version\n"
 		"   or: gesm --help\n"
 		"Commands:\n"
 		"   --gui        \tshows a graphical user interface\n"
 		"   --accel      \tprints acceleration values on screen\n"
-		"   --new    FILE\tcreates a new class (.class) or model (.model)\n"
-		"   --view   FILE\tvisualizes a class (.class) or model (.model)\n"
+		"   --new    FILE\tcreates a new class (.class), or model (.model)\n"
+		"   --view   FILE\tvisualizes an accel (.accel), class (.class),\n"
+		"                \tor model (.model)\n"
 		"   --train  FILE\ttrains a class (.class) or model (.model)\n"
 		"   --record FILE\tsaves acceleration values to file (.accel)\n"
+		"   --upload FILE\tused for gathering acceleration values\n"
 		"Options:\n"
 		"   --verbose    \tdisplays additional information\n"
 		"   --confirm    \tasks confirmation for save\n"
+		"   --no-header  \tdoesn't show the initial header\n"
 		"Remarks:\n"
 		"   neo2 refers to the top accelerometer, and\n"
 		"   neo3 refers to the bottom accelerometer;\n");
@@ -481,6 +543,25 @@ static void neo_signal_cb(int signal)
 }
 
 /*
+ *
+ */
+static void sim_signal_cb(int signal)
+{
+	switch (signal)
+	{
+		case SIGALRM:
+			cmd_record_end(file);
+		case SIGINT:
+		case SIGTERM:
+			dev_close(dev_sim);
+
+			exit(0);
+			break;
+		default:
+			break;
+	}
+}
+/*
  * 
  */
 static void dev_close(enum device dev)
@@ -500,6 +581,10 @@ static void dev_close(enum device dev)
 		if (g_mode == graphical) {
 			update_gui("Closed");
 		}
+	} else if (dev == dev_sim) {
+		sim_close(&sim);
+		printf("Closed.\n");
+		fflush(stdout);
 	}
 }
 
@@ -572,7 +657,7 @@ static void cmd_record_begin(char *file)
  */
 static void cmd_record_end(char *file)
 {
-	if (seq.end == 0) {
+	if (seq.index == 0) {
 		fprintf(stderr, "Sorry, your accelerometer doesn't seem to work\n"
 			"No value was recorded; values weren't saved to file!\n");
 		fflush(stderr);

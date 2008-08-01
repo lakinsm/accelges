@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2008 by Openmoko, Inc.
- * Written by Paul-Valentin Borza <paul@borza.ro>
+ * Copyright (C) 2008 by OpenMoko, Inc.
+ * Written by Paul-Valentin Borza <gestures@borza.ro>
  * All Rights Reserved
  *
  * This program is free software; you can redistribute it and/or modify
@@ -18,32 +18,43 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#ifndef GESM_H_
-#define GESM_H_
+#include <fcntl.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/select.h>
+#include <unistd.h>
 
-#include "ges.h"
+#include "accel.h"
+#include "accelsim.h"
 
-typedef enum ui_mode {
-	console = 0, /* console ui */
-	graphical /* graphical ui */
-} ui_mode;
+/*
+ * opens file to read from
+ */
+unsigned char sim_open(struct sim_t *sim, char *filename)
+{
+	accel_read_3d(&sim->seq, filename);
+	return 1;
 
-typedef enum device {
-	dev_none = 0,
-	dev_wii,
-	dev_neo2,
-	dev_neo3,
-	dev_sim /* simulate device by reading file */
-} device;
+}
 
-typedef void (* class_process)(struct sample_3d_t sample[], unsigned int sample_len);
-typedef void (* model_process)(struct accel_3d_t accel[], unsigned int accel_len);
+/*
+ * closes the file
+ */
+void sim_close(struct sim_t *sim)
+{
+}
 
-/* */
-void handshake(char cmd);
+/*
+ * begins reading the file
+ */
+void sim_begin_read(struct sim_t *sim)
+{
+	int i;
+	for (i = sim->seq.begin; i <= sim->seq.end; i++)
+	{
+		if (sim->handle_recv) {
+			sim->handle_recv(1, sim->seq.each[i]);
+		}
+	}
+}
 
-char file[1024];
-char dir[1024];
-enum device g_dev;
-
-#endif /*GESM_H_*/

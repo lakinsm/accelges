@@ -1,6 +1,7 @@
 SUBDIRS = \
 	accelneo \
 	accelwii \
+	accelsim \
 	ges \
 	gesd \
 	gesl \
