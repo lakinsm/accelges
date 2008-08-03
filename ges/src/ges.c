@@ -370,9 +370,11 @@ static void recognize(struct ges_3d_t *ges, struct accel_3d_t accel[], unsigned 
 		//printf("\n");
 	
 		/* prune if the last state is not the final state */
-		if (decoded_states[accel_len - 1] != ges->model[i].state_len - 1)
-		{
-			pruned[i] = 1;
+		if (0) {
+			if (decoded_states[accel_len - 1] != ges->model[i].state_len - 1)
+			{
+				pruned[i] = 1;
+			}
 		}
 		/* prunning by state duration! */
 		//if (!pruned[i])
@@ -439,7 +441,7 @@ static void recognize(struct ges_3d_t *ges, struct accel_3d_t accel[], unsigned 
 	
 	for (i = 0; i < ges->model_len; i++)
 	{
-		printf("%s (%s):\t%e\n", ges->model_cmd[i], pruned[i] ? "pruned" : "unpruned", vals[i]);
+		printf("%s (%s):\t%f\n", ges->model_cmd[i], pruned[i] ? "pruned" : "unpruned", vals[i]);
 	}
 	fflush(stdout);
 

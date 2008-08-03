@@ -31,10 +31,10 @@
 /* 1/5 seconds */
 #define FRAME_DIF 20
 /* also send to the recognizer some more frames, before the ones classified */
-#define FRAME_BEFORE 20
+#define FRAME_BEFORE 10
 /* FRAME_AFTER is not used in this release, it would have to wait for those frames */
 /* also send to the recognizer some more frames, after the ones classified */
-#define FRAME_AFTER 5
+#define FRAME_AFTER 10
 
 #define CLASS_TIME 60
 

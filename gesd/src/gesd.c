@@ -54,6 +54,7 @@ static struct ges_3d_t ges;
 
 static char sim_filename[512];
 
+static unsigned char no_dbus = 0;
 /*
  * 
  */
@@ -164,12 +165,14 @@ static void print_header(void)
  */
 static void print_usage(void)
 {
-	printf("Usage: gesd --wii  --config FILE\n"
-		"   or: gesd --neo2 --config FILE\n"
-		"   or: gesd --neo3 --config FILE\n"
-		"   or: gesd --sim .accel --config FILE\n"
+	printf("Usage: gesd --wii  --config FILE OPTION\n"
+		"   or: gesd --neo2 --config FILE OPTION\n"
+		"   or: gesd --neo3 --config FILE OPTION\n"
+		"   or: gesd --sim .accel --config FILE OPTION\n"
 		"   or: gesd --version\n"
 		"   or: gesd --help\n"
+		"Options:\n"
+		"   no-dbus\tdo not send dbus signals\n"
 		"Remarks:\n"
 		"   neo2 refers to the top accelerometer, and\n"
 		"   neo3 refers to the bottom accelerometer;\n");
@@ -370,6 +373,7 @@ int main(int argc, char **argv)
 		{ "neo3", no_argument, 0, 'z' },
 		{ "sim", required_argument, 0, 's' },
 		{ "config", required_argument, 0, 'c' },
+		{ "no-dbus", no_argument, 0, 'n' },
 		{ "version", no_argument, 0, 'v' },
 		{ "help", no_argument, 0, 'h' },
 		{ 0, 0, 0, 0 }
@@ -382,7 +386,7 @@ int main(int argc, char **argv)
 	
 	/* don't display errors to stderr */
 	opterr = 0;
-	while ((long_opt_val = getopt_long(argc, argv, "wqzc:vh", long_opts, &long_opt_ind)) != -1) 
+	while ((long_opt_val = getopt_long(argc, argv, "wqzc:nvh", long_opts, &long_opt_ind)) != -1) 
 	{
 		switch (long_opt_val)
 		{
@@ -405,6 +409,9 @@ int main(int argc, char **argv)
 				strncpy(config_arg, optarg, sizeof(config_arg));
 				config_arg[sizeof(config_arg) / sizeof(config_arg[0]) - 1] = '\0';				
 				break;
+			case 'n': /* --no-dbus */
+				no_dbus = 1;
+				break;
 			case 'v': /* --version */
 				print_version();
 				exit(0);
@@ -424,8 +431,10 @@ int main(int argc, char **argv)
 		exit(1);
 	}		
 	
-	/* begin thread for dbus service */
-	pthread_create(&dbus_thread, 0, main_dbus, 0);
+	if (!no_dbus) {
+		/* begin thread for dbus service */
+		pthread_create(&dbus_thread, 0, main_dbus, 0);
+	}
 	/* assign descriptors for reading accel values */
 	if (!handshake(dev_arg)) {
 		exit(2);
