@@ -39,6 +39,8 @@
 
 #define VERSION "0.1"
 
+#define NEW_NUM_FRAMES 8
+
 static enum ui_mode g_mode;
 
 static struct neo_t neo;
@@ -987,8 +989,8 @@ static void cmd_model_new_begin(char *file)
  */
 static void cmd_model_new_cb(struct accel_3d_t accels[], unsigned int accel_len)
 {
-	unsigned int state_len = accel_len / 17;
-	if (accel_len % 17 > 1) {
+	unsigned int state_len = accel_len / NEW_NUM_FRAMES;
+	if (accel_len % NEW_NUM_FRAMES > 1) {
 		state_len += 1;
 	}
 	hmm_create_3d(&hmm, state_len);
@@ -1001,7 +1003,7 @@ static void cmd_model_new_cb(struct accel_3d_t accels[], unsigned int accel_len)
 	int i;
 	for (i = 0; i < accel_len; i++)
 	{	
-		if (i % 17 == 0)
+		if (i % NEW_NUM_FRAMES == 0)
 		{
 			if (i > 0) {
 				gauss_mix_create_3d(&hmm.output_prob[state_ind], 1);
