@@ -88,6 +88,24 @@ void recognized_cb(DBusGProxy *proxy, const char *id,
 	} else if (strcmp(id, "screen_ppp") == 0) {
 		/* vertical position, at 45 deg, usb is in the left */
 		system("xrandr -o inverted");
+	} else if (strcmp(id, "left") == 0) {
+		system("gst-launch filesrc location=/etc/accelges/neo2/left.mp3 "
+			"! mad ! audioconvert ! alsasink");
+	} else if (strcmp(id, "right") == 0) {
+		system("gst-launch filesrc location=/etc/accelges/neo2/right.mp3 "
+			"! mad ! audioconvert ! alsasink");
+	} else if (strcmp(id, "up") == 0) {
+		system("gst-launch filesrc location=/etc/accelges/neo2/up.mp3 "
+			"! mad ! audioconvert ! alsasink");
+	} else if (strcmp(id, "down") == 0) {
+		system("gst-launch filesrc location=/etc/accelges/neo2/down.mp3 "
+			"! mad ! audioconvert ! alsasink");
+	} else if (strcmp(id, "hor_circle") == 0) {
+		system("gst-launch filesrc location=/etc/accelges/neo2/hor_circle.mp3 "
+			"! mad ! audioconvert ! alsasink");
+	} else if (strcmp(id, "ver_circle") == 0) {
+		system("gst-launch filesrc location=/etc/accelges/neo2/ver_circle.mp3 "
+			"! mad ! audioconvert ! alsasink");
 	} else {
 		printf("Gesture '%s'\n", id);
 		fflush(stdout);
@@ -108,9 +126,10 @@ static void print_header(void)
 static DBusHandlerResult
 signal_filter (DBusConnection *connection, DBusMessage *message, void *user_data)
 {
-	printf("Received from interface '%s', member '%s'\n", 
-		dbus_message_get_interface(message), dbus_message_get_member(message));
-	fflush(stdout);
+	//printf("Received from interface '%s', member '%s'\n", 
+	//	dbus_message_get_interface(message), dbus_message_get_member(message));
+	//fflush(stdout);
+	
 	/* User data is the event loop we are running in */
 	GMainLoop *loop = user_data;
 	/* A signal from the bus saying we are about to be disconnected */
@@ -123,29 +142,29 @@ signal_filter (DBusConnection *connection, DBusMessage *message, void *user_data
 	}
 	/* A Ping signal on the com.burtonini.dbus.Signal interface */
 	else if (dbus_message_is_signal (message, DBUS_GSM_CALL_NAME, "CallStatus")) {
-		printf("CALL STATUS RECEIVED\n");
-		fflush(stdout);
+		//printf("CALL STATUS RECEIVED\n");
+		//fflush(stdout);
 		DBusMessageIter iter;
 		DBusError error;
 		int index = 0;
 		const char *status;
 	  dbus_error_init (&error);
 
-		dbus_message_iter_init (&message, &iter);
+		//dbus_message_iter_init (&message, &iter);
 		//while ((dbus_message_iter_get_arg_type (&iter)) != DBUS_TYPE_INVALID)
 		//{
 				//if (dbus_message_iter_get_arg_type(&iter) == DBUS_TYPE_INT32)
 				//{
 					//dbus_message_iter_get_basic(&iter, &index);
 				//}	
-					dbus_message_iter_next (&iter);
+					//dbus_message_iter_next (&iter);
 				//if (dbus_message_iter_get_arg_type(&iter) == DBUS_TYPE_STRING)
 				//{
-					dbus_message_iter_get_basic(&iter, &status);
+					//dbus_message_iter_get_basic(&iter, &status);
 				//}
-				dbus_message_iter_next (&iter);
+				//dbus_message_iter_next (&iter);
 		//}
-		printf("%d, %s\n", index, status);
+		//printf("%d, %s\n", index, status);
 	  /*
 		if (dbus_message_get_args 
 	  	(message, &error, DBUS_TYPE_INT32, &index, DBUS_TYPE_STRING, &status, DBUS_TYPE_INVALID)) {
