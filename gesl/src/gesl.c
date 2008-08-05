@@ -24,6 +24,8 @@
 #include <unistd.h>
 #include <dbus/dbus-glib-bindings.h>
 #include <dbus/dbus-glib.h>
+#include <dbus/dbus.h>
+#include <dbus/dbus-glib-lowlevel.h>
 #include <glib.h>
 #include "service.h"
 
@@ -34,6 +36,9 @@
 #define DBUS_OPHONED_NAME "org.freesmartphone.ophoned"
 #define DBUS_GSM_DEVICE_PATH "/org/freesmartphone/GSM/Device"
 #define DBUS_GSM_DEVICE_CALL_NAME "org.freesmartphone.GSM.Device.Call"
+
+static DBusHandlerResult signal_filter 
+      (DBusConnection *connection, DBusMessage *message, void *user_data);
 
 static void power_up_screen(void)
 {
@@ -100,6 +105,38 @@ static void print_header(void)
 }
 
 
+static DBusHandlerResult
+signal_filter (DBusConnection *connection, DBusMessage *message, void *user_data)
+{
+	/* User data is the event loop we are running in */
+	GMainLoop *loop = user_data;
+	/* A signal from the bus saying we are about to be disconnected */
+	if (dbus_message_is_signal 
+		(message, "org.freedesktop.Local", "Disconnected")) {
+			/* Tell the main loop to quit */
+			g_main_loop_quit (loop);
+			/* We have handled this message, don't pass it on */
+			return DBUS_HANDLER_RESULT_HANDLED;
+	}
+	/* A Ping signal on the com.burtonini.dbus.Signal interface */
+	else if (dbus_message_is_signal (message, DBUS_GSM_DEVICE_CALL_NAME, "CallStatus")) {
+		printf("CALL STATUS RECEIVED\n");
+		fflush(stdout);
+		DBusError error;
+		char *s;
+	  dbus_error_init (&error);
+	  if (dbus_message_get_args 
+	  	(message, &error, DBUS_TYPE_STRING, &s, DBUS_TYPE_INVALID)) {
+		  	g_print("Ping received: %s\n", s);
+				dbus_free (s);
+		} else {
+			g_print("Ping received, but error getting message: %s\n", error.message);
+			dbus_error_free (&error);
+		}
+		return DBUS_HANDLER_RESULT_HANDLED;
+	}
+	return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
+}
 
 /*
  * 
@@ -108,7 +145,9 @@ int main (int argc, char **argv)
 {
 	GMainLoop *loop = 0;
 	DBusGConnection *conn = 0;
+	DBusConnection *conn2 = 0;
 	GError *error = 0;
+	DBusError error2;
 	DBusGProxy *proxy;
 	DBusGProxy *proxy2;
 
@@ -158,15 +197,24 @@ int main (int argc, char **argv)
 	dbus_g_proxy_connect_signal(proxy, "Recognized",
 		G_CALLBACK(recognized_cb), conn, 0);
 	
-	dbus_g_proxy_add_signal(proxy2, "CallStatus",
-		G_TYPE_INT, G_TYPE_STRING, dbus_g_type_get_map ("GHashTable", G_TYPE_STRING, G_TYPE_VALUE), G_TYPE_INVALID);
+//	dbus_g_proxy_add_signal(proxy2, "CallStatus",
+//		G_TYPE_INT, G_TYPE_STRING, dbus_g_type_get_map ("GHashTable", G_TYPE_STRING, G_TYPE_VALUE), G_TYPE_INVALID);
 
-	dbus_g_proxy_connect_signal(proxy2, "CallStatus",
-		G_CALLBACK(call_status_cb), conn, 0);
+//	dbus_g_proxy_connect_signal(proxy2, "CallStatus",
+//		G_CALLBACK(call_status_cb), conn, 0);
 	
+	dbus_error_init(&error2);
+	conn2 = dbus_bus_get(DBUS_BUS_SYSTEM, &error2);
+	if (!conn2)
+	{
+		g_warning ("Failed to connect to the D-BUS daemon: %s", error2.message);
+		dbus_error_free (&error2);
+	}
+	dbus_connection_setup_with_g_main (conn2, NULL);
+
 	/* listening to messages from all objects as no path is specified */
-//	dbus_bus_add_match (conn, "type='signal',interface='com.burtonini.dbus.Signal'");
-//	dbus_connection_add_filter (conn, signal_filter, loop, 0);
+	dbus_bus_add_match (conn2, "type='signal'," DBUS_GSM_DEVICE_CALL_NAME, &error2);
+	dbus_connection_add_filter (conn2, signal_filter, loop, 0);
 
 
 	g_print("Listening for signals on: '%s'\n", DBUS_SERVICE_NAME);
