@@ -126,12 +126,13 @@ signal_filter (DBusConnection *connection, DBusMessage *message, void *user_data
 		printf("CALL STATUS RECEIVED\n");
 		fflush(stdout);
 		DBusError error;
-		char *s;
+		int index;
+		char *status;
 	  dbus_error_init (&error);
 	  if (dbus_message_get_args 
-	  	(message, &error, DBUS_TYPE_STRING, &s, DBUS_TYPE_INVALID)) {
-		  	g_print("Ping received: %s\n", s);
-				dbus_free (s);
+	  	(message, &error, DBUS_TYPE_INT32, &index, DBUS_TYPE_STRING, &status, DBUS_TYPE_INVALID)) {
+		  	g_print("Status received: %s\n", status);
+				dbus_free (status);
 		} else {
 			g_print("Ping received, but error getting message: %s\n", error.message);
 			dbus_error_free (&error);
