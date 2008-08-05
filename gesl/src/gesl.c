@@ -40,7 +40,7 @@ static void power_up_screen(void)
 }
 
 void call_status_cb(DBusGProxy *proxy, int index,
-	char *status, GObject *properties, gpointer user_data)
+	char *status, GHashTable *properties, gpointer user_data)
 {
 	printf("Status: %s\n", status);
 }
@@ -156,7 +156,7 @@ int main (int argc, char **argv)
 		G_CALLBACK(recognized_cb), conn, 0);
 	
 	dbus_g_proxy_add_signal(proxy2, "CallStatus",
-		G_TYPE_INT, G_TYPE_STRING, G_TYPE_OBJECT, G_TYPE_INVALID);
+		G_TYPE_INT, G_TYPE_STRING, DBUS_TYPE_G_STRING_STRING_HASHTABLE, G_TYPE_INVALID);
 
 	dbus_g_proxy_connect_signal(proxy2, "CallStatus",
 		G_CALLBACK(call_status_cb), conn, 0);
