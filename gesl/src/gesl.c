@@ -125,11 +125,27 @@ signal_filter (DBusConnection *connection, DBusMessage *message, void *user_data
 	else if (dbus_message_is_signal (message, DBUS_GSM_CALL_NAME, "CallStatus")) {
 		printf("CALL STATUS RECEIVED\n");
 		fflush(stdout);
+		DBusMessageIter iter;
 		DBusError error;
-		int index;
+		dbus_int32_t index;
 		char *status;
 	  dbus_error_init (&error);
-	  if (dbus_message_get_args 
+
+		dbus_message_iter_init (&message, &iter);
+		while ((dbus_message_iter_get_arg_type (&iter)) != DBUS_TYPE_INVALID)
+		{
+				if (dbus_message_iter_get_arg_type(&iter) == DBUS_TYPE_INT32)
+				{
+					dbus_message_iter_get_basic(&iter, &index);
+				}	else if (dbus_message_iter_get_arg_type(&iter) == DBUS_TYPE_STRING)
+				{
+					dbus_message_iter_get_basic(&iter, &status);
+				}
+				dbus_message_iter_next (&iter);
+		}
+		printf("%d, %s\n", index, status);
+	  /*
+		if (dbus_message_get_args 
 	  	(message, &error, DBUS_TYPE_INT32, &index, DBUS_TYPE_STRING, &status, DBUS_TYPE_INVALID)) {
 		  	g_print("Status received: %s\n", status);
 				dbus_free (status);
@@ -137,6 +153,7 @@ signal_filter (DBusConnection *connection, DBusMessage *message, void *user_data
 			g_print("Ping received, but error getting message: %s\n", error.message);
 			dbus_error_free (&error);
 		}
+		*/
 		return DBUS_HANDLER_RESULT_HANDLED;
 	}
 	return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
