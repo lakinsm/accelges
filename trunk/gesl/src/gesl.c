@@ -108,6 +108,8 @@ static void print_header(void)
 static DBusHandlerResult
 signal_filter (DBusConnection *connection, DBusMessage *message, void *user_data)
 {
+	printf("received something\n");
+	fflush(stdout);
 	/* User data is the event loop we are running in */
 	GMainLoop *loop = user_data;
 	/* A signal from the bus saying we are about to be disconnected */
@@ -213,7 +215,7 @@ int main (int argc, char **argv)
 	dbus_connection_setup_with_g_main (conn2, NULL);
 
 	/* listening to messages from all objects as no path is specified */
-	dbus_bus_add_match (conn2, "type='signal'," DBUS_GSM_DEVICE_CALL_NAME, &error2);
+	dbus_bus_add_match (conn2, "type='signal'", &error2);
 	dbus_connection_add_filter (conn2, signal_filter, loop, 0);
 
 
