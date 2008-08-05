@@ -108,7 +108,8 @@ static void print_header(void)
 static DBusHandlerResult
 signal_filter (DBusConnection *connection, DBusMessage *message, void *user_data)
 {
-	printf("received something\n");
+	printf("Received from interface '%s', member '%s'\n", 
+		dbus_message_get_interface(message), dbus_message_get_member(message));
 	fflush(stdout);
 	/* User data is the event loop we are running in */
 	GMainLoop *loop = user_data;
