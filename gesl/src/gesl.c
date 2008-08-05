@@ -127,22 +127,24 @@ signal_filter (DBusConnection *connection, DBusMessage *message, void *user_data
 		fflush(stdout);
 		DBusMessageIter iter;
 		DBusError error;
-		dbus_int32_t index;
-		char *status;
+		int index;
+		const char *status;
 	  dbus_error_init (&error);
 
 		dbus_message_iter_init (&message, &iter);
-		while ((dbus_message_iter_get_arg_type (&iter)) != DBUS_TYPE_INVALID)
-		{
-				if (dbus_message_iter_get_arg_type(&iter) == DBUS_TYPE_INT32)
-				{
+		//while ((dbus_message_iter_get_arg_type (&iter)) != DBUS_TYPE_INVALID)
+		//{
+				//if (dbus_message_iter_get_arg_type(&iter) == DBUS_TYPE_INT32)
+				//{
 					dbus_message_iter_get_basic(&iter, &index);
-				}	else if (dbus_message_iter_get_arg_type(&iter) == DBUS_TYPE_STRING)
-				{
+				//}	
+					dbus_message_iter_next (&iter);
+				//if (dbus_message_iter_get_arg_type(&iter) == DBUS_TYPE_STRING)
+				//{
 					dbus_message_iter_get_basic(&iter, &status);
-				}
+				//}
 				dbus_message_iter_next (&iter);
-		}
+		//}
 		printf("%d, %s\n", index, status);
 	  /*
 		if (dbus_message_get_args 
