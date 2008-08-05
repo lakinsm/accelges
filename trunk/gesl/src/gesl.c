@@ -30,6 +30,15 @@
 #define DBUS_RECOGNIZER_PATH "/org/openmoko/accelges/Recognizer"
 #define DBUS_RECOGNIZER_NAME "org.openmoko.accelges.Recognizer"
 
+#define DBUS_OPHONED_NAME "org.freesmartphone.ophoned"
+#define DBUS_GSM_DEVICE_PATH "/org/freesmartphone/GSM/Device"
+#define DBUS_GSM_DEVICE_CALL_NAME "org.freesmartphone.GSM.Device.Call"
+
+static void power_up_screen(void)
+{
+	system("echo 0 > bl_power");
+}
+
 /*
  * 
  */
@@ -39,24 +48,34 @@ void recognized_cb(DBusGProxy *purple_proxy, const char *id,
 	printf("Received: %s\n", id);
 	fflush(stdout);
 	if (strcmp(id, "screen_zzp") == 0) {
+		/* sits on the table, screen up */
 		system("xrandr -o normal");
 	} else if (strcmp(id, "screen_zzn") == 0) {
+		/* sits on the table, screen down */
 		system("xrandr -o normal");
 	} else if (strcmp(id, "screen_zpz") == 0) {
+		/* hold vertically, with the hole up (speaker is down) */
 		system("xrandr -o inverted");
 	} else if (strcmp(id, "screen_znz") == 0) {
+		/* hold vertically, with the hole down (speaker is up) */
 		system("xrandr -o normal");
 	} else if (strcmp(id, "screen_pzz") == 0) {
+		/* sits on the table, and the side with the usb is down (you can't see it) */
 		system("xrandr -o left");
 	} else if (strcmp(id, "screen_nzz") == 0) {
+		/* sits on the table, and the side with the usb is up (you can see it) */
 		system("xrandr -o right");
 	} else if (strcmp(id, "screen_npp") == 0) {
+		/* sits horizontally, tilted at 45 deg, screen faces user, usb is up */
 		system("xrandr -o right");
 	} else if (strcmp(id, "screen_nnp") == 0) {
+		/* vertical position, at 45 deg, usb is in the right */
 		system("xrandr -o normal");
 	} else if (strcmp(id, "screen_pnp") == 0) {
+		/* sits horizontally, tilted at 45 deg, screen faces user, usb is down */
 		system("xrandr -o left");
 	} else if (strcmp(id, "screen_ppp") == 0) {
+		/* vertical position, at 45 deg, usb is in the left */
 		system("xrandr -o inverted");
 	} else {
 		printf("Gesture '%s'\n", id);
@@ -83,6 +102,7 @@ int main (int argc, char **argv)
 	DBusGConnection *conn = 0;
 	GError *error = 0;
 	DBusGProxy *proxy;
+	DBusGProxy *proxy2;
 
 	print_header();
 		
@@ -107,6 +127,15 @@ int main (int argc, char **argv)
 		exit(2);
 	}
 	
+	proxy2 = dbus_g_proxy_new_for_name_owner(conn,
+		DBUS_OPHONED_NAME, DBUS_GSM_DEVICE_PATH, DBUS_GSM_DEVICE_CALL_NAME, &error);
+
+	if (proxy2 == 0) {
+		g_error("%s", error->message);
+		g_error_free(error);
+		exit(3);
+	}
+
 	if (!org_openmoko_accelges_Recognizer_listen (proxy, TRUE, &error)) {
 		g_error("%s", error->message);
 		g_error_free(error);
