@@ -33,9 +33,9 @@
 #define DBUS_RECOGNIZER_PATH "/org/openmoko/accelges/Recognizer"
 #define DBUS_RECOGNIZER_NAME "org.openmoko.accelges.Recognizer"
 
-#define DBUS_OPHONED_NAME "org.freesmartphone.ophoned"
-#define DBUS_GSM_DEVICE_PATH "/org/freesmartphone/GSM/Device"
-#define DBUS_GSM_DEVICE_CALL_NAME "org.freesmartphone.GSM.Device.Call"
+//#define DBUS_OPHONED_NAME "org.freesmartphone.ophoned"
+//#define DBUS_GSM_DEVICE_PATH "/org/freesmartphone/GSM/Device"
+#define DBUS_GSM_CALL_NAME "org.freesmartphone.GSM.Call"
 
 static DBusHandlerResult signal_filter 
       (DBusConnection *connection, DBusMessage *message, void *user_data);
@@ -122,7 +122,7 @@ signal_filter (DBusConnection *connection, DBusMessage *message, void *user_data
 			return DBUS_HANDLER_RESULT_HANDLED;
 	}
 	/* A Ping signal on the com.burtonini.dbus.Signal interface */
-	else if (dbus_message_is_signal (message, DBUS_GSM_DEVICE_CALL_NAME, "CallStatus")) {
+	else if (dbus_message_is_signal (message, DBUS_GSM_CALL_NAME, "CallStatus")) {
 		printf("CALL STATUS RECEIVED\n");
 		fflush(stdout);
 		DBusError error;
@@ -177,14 +177,14 @@ int main (int argc, char **argv)
 		exit(2);
 	}
 	
-	proxy2 = dbus_g_proxy_new_for_name_owner(conn,
-		DBUS_OPHONED_NAME, DBUS_GSM_DEVICE_PATH, DBUS_GSM_DEVICE_CALL_NAME, &error);
+//	proxy2 = dbus_g_proxy_new_for_name_owner(conn,
+//		DBUS_OPHONED_NAME, DBUS_GSM_DEVICE_PATH, DBUS_GSM_DEVICE_CALL_NAME, &error);
 
-	if (proxy2 == 0) {
-		g_error("%s", error->message);
-		g_error_free(error);
-		exit(3);
-	}
+//	if (proxy2 == 0) {
+//		g_error("%s", error->message);
+//		g_error_free(error);
+//		exit(3);
+//	}
 
 	if (!org_openmoko_accelges_Recognizer_listen (proxy, TRUE, &error)) {
 		g_error("%s", error->message);
@@ -216,7 +216,7 @@ int main (int argc, char **argv)
 	dbus_connection_setup_with_g_main (conn2, NULL);
 
 	/* listening to messages from all objects as no path is specified */
-	dbus_bus_add_match (conn2, "type='signal'", &error2);
+	dbus_bus_add_match (conn2, "type='signal', interface='" DBUS_GSM_CALL_NAME "'", &error2);
 	dbus_connection_add_filter (conn2, signal_filter, loop, 0);
 
 
