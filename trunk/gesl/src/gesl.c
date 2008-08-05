@@ -39,10 +39,15 @@ static void power_up_screen(void)
 	system("echo 0 > bl_power");
 }
 
+void call_status_cb(DBusGProxy *proxy, int index,
+	char *status, GObject *properties, gpointer user_data)
+{
+	printf("Status: %s\n", status);
+}
 /*
  * 
  */
-void recognized_cb(DBusGProxy *purple_proxy, const char *id, 
+void recognized_cb(DBusGProxy *proxy, const char *id, 
 	gpointer user_data)
 {
 	printf("Received: %s\n", id);
@@ -150,6 +155,12 @@ int main (int argc, char **argv)
 	dbus_g_proxy_connect_signal(proxy, "Recognized",
 		G_CALLBACK(recognized_cb), conn, 0);
 	
+	dbus_g_proxy_add_signal(proxy2, "CallStatus",
+		G_TYPE_INT, G_TYPE_STRING, G_TYPE_OBJECT, G_TYPE_INVALID);
+
+	dbus_g_proxy_connect_signal(proxy2, "CallStatus",
+		G_CALLBACK(call_status_cb), conn, 0);
+
 	g_print("Listening for signals on: '%s'\n", DBUS_SERVICE_NAME);
 	
 	g_main_loop_run(loop);
