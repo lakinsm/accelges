@@ -127,7 +127,7 @@ signal_filter (DBusConnection *connection, DBusMessage *message, void *user_data
 		fflush(stdout);
 		DBusMessageIter iter;
 		DBusError error;
-		int index;
+		int index = 0;
 		const char *status;
 	  dbus_error_init (&error);
 
@@ -136,7 +136,7 @@ signal_filter (DBusConnection *connection, DBusMessage *message, void *user_data
 		//{
 				//if (dbus_message_iter_get_arg_type(&iter) == DBUS_TYPE_INT32)
 				//{
-					dbus_message_iter_get_basic(&iter, &index);
+					//dbus_message_iter_get_basic(&iter, &index);
 				//}	
 					dbus_message_iter_next (&iter);
 				//if (dbus_message_iter_get_arg_type(&iter) == DBUS_TYPE_STRING)
