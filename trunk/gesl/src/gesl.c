@@ -23,7 +23,8 @@
 #include <string.h>
 #include <unistd.h>
 #include <dbus/dbus-glib-bindings.h>
-
+#include <dbus/dbus-glib.h>
+#include <glib.h>
 #include "service.h"
 
 #define DBUS_SERVICE_NAME "org.openmoko.accelges"
@@ -39,10 +40,10 @@ static void power_up_screen(void)
 	system("echo 0 > bl_power");
 }
 
-void call_status_cb(DBusGProxy *proxy, int index,
-	char *status, GHashTable *properties, gpointer user_data)
+void call_status_cb(DBusGProxy *proxy, int *index,
+	const char *state, GHashTable *properties, gpointer user_data)
 {
-	printf("Status: %s\n", status);
+	printf("Call status: %s\n", state);
 }
 /*
  * 
@@ -97,6 +98,8 @@ static void print_header(void)
 		"This program is free software under the terms of the GNU General Public License.\n\n");
 	fflush(stdout);
 }
+
+
 
 /*
  * 
@@ -156,10 +159,15 @@ int main (int argc, char **argv)
 		G_CALLBACK(recognized_cb), conn, 0);
 	
 	dbus_g_proxy_add_signal(proxy2, "CallStatus",
-		G_TYPE_INT, G_TYPE_STRING, DBUS_TYPE_G_STRING_STRING_HASHTABLE, G_TYPE_INVALID);
+		G_TYPE_INT, G_TYPE_STRING, dbus_g_type_get_map ("GHashTable", G_TYPE_STRING, G_TYPE_VALUE), G_TYPE_INVALID);
 
 	dbus_g_proxy_connect_signal(proxy2, "CallStatus",
 		G_CALLBACK(call_status_cb), conn, 0);
+	
+	/* listening to messages from all objects as no path is specified */
+//	dbus_bus_add_match (conn, "type='signal',interface='com.burtonini.dbus.Signal'");
+//	dbus_connection_add_filter (conn, signal_filter, loop, 0);
+
 
 	g_print("Listening for signals on: '%s'\n", DBUS_SERVICE_NAME);
 	
