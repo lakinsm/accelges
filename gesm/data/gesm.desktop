@@ -2,7 +2,7 @@
 Name=Gesture Manager
 Comment=Train gestures
 Exec=gesm-neo2.sh
-Icon=applications-games
+Icon=accelges
 Terminal=false
 Type=Application
 Categories=GTK;Utility;

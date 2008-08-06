@@ -32,6 +32,9 @@ appdir = $(datadir)/applications
 app_DATA = \
 	data/gesm.desktop
 
+pixdir = $(datadir)/pixmaps
+	data/accelges.png
+
 INCLUDES = -DGLADEDIR=\"$(gladedir)\" -DAPPDIR=\"$(bindir)\"
 
 EXTRA_DIST = \
@@ -53,3 +56,4 @@ gesm_LDFLAGS = \
 	-L$(top_builddir)/ges \
 	`pkg-config --libs gtk+-2.0 libglade-2.0 gthread-2.0` -export-dynamic \
 	`curl-config --libs`
+
