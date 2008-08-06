@@ -88,27 +88,13 @@ void recognized_cb(DBusGProxy *proxy, const char *id,
 	} else if (strcmp(id, "screen_ppp") == 0) {
 		/* vertical position, at 45 deg, usb is in the left */
 		system("xrandr -o inverted");
-	} else if (strcmp(id, "left") == 0) {
-		system("gst-launch filesrc location=/etc/accelges/neo2/left.mp3 "
-			"! mad ! audioconvert ! alsasink");
-	} else if (strcmp(id, "right") == 0) {
-		system("gst-launch filesrc location=/etc/accelges/neo2/right.mp3 "
-			"! mad ! audioconvert ! alsasink");
-	} else if (strcmp(id, "up") == 0) {
-		system("gst-launch filesrc location=/etc/accelges/neo2/up.mp3 "
-			"! mad ! audioconvert ! alsasink");
-	} else if (strcmp(id, "down") == 0) {
-		system("gst-launch filesrc location=/etc/accelges/neo2/down.mp3 "
-			"! mad ! audioconvert ! alsasink");
-	} else if (strcmp(id, "hor_circle") == 0) {
-		system("gst-launch filesrc location=/etc/accelges/neo2/hor_circle.mp3 "
-			"! mad ! audioconvert ! alsasink");
-	} else if (strcmp(id, "ver_circle") == 0) {
-		system("gst-launch filesrc location=/etc/accelges/neo2/ver_circle.mp3 "
-			"! mad ! audioconvert ! alsasink");
 	} else {
-		printf("Gesture '%s'\n", id);
-		fflush(stdout);
+		/* gesture that has no action associated */
+		char body[512];
+		sprintf(body, "notify-send 'Recognized' 'Gesture:	<b>%s</b>'", id);
+		system(body);
+		//printf("Gesture '%s'\n", id);
+		//fflush(stdout);
 	}
 }
 
