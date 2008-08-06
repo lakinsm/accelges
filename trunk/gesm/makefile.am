@@ -33,6 +33,7 @@ app_DATA = \
 	data/gesm.desktop
 
 pixdir = $(datadir)/pixmaps
+pix_DATA = \
 	data/accelges.png
 
 INCLUDES = -DGLADEDIR=\"$(gladedir)\" -DAPPDIR=\"$(bindir)\"
