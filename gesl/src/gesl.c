@@ -91,7 +91,7 @@ void recognized_cb(DBusGProxy *proxy, const char *id,
 	} else {
 		/* gesture that has no action associated */
 		char body[512];
-		sprintf(body, "notify-send 'Recognized' 'Gesture:	<b>%s</b>'", id);
+		sprintf(body, "notify-send --icon=accelges.png 'Recognized' 'Gesture:	<b>%s</b>'", id);
 		system(body);
 		//printf("Gesture '%s'\n", id);
 		//fflush(stdout);

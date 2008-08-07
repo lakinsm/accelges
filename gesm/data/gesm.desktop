@@ -1,5 +1,5 @@
 [Desktop Entry]
-Name=Gesture Manager
+Name=Gestures
 Comment=Train gestures
 Exec=gesm-neo2.sh
 Icon=accelges
