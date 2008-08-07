@@ -3,7 +3,7 @@ SECTION = "openmoko/utilities"
 
 PN = "accelges"
 PV = "0.1.0+svnr${SRCREV}"
-PR = "r2"
+PR = "r3"
 DEPENDS = "dbus dbus-glib libxrandr libnotify notification-daemon curl gtk+"
 
 SRC_URI = "svn://accelges.googlecode.com/svn;module=trunk;proto=https"
