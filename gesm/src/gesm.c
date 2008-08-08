@@ -39,7 +39,7 @@
 
 #define VERSION "0.1"
 
-#define NEW_NUM_FRAMES 8
+#define NEW_NUM_FRAMES 9
 
 static enum ui_mode g_mode;
 
@@ -990,9 +990,11 @@ static void cmd_model_new_begin(char *file)
 static void cmd_model_new_cb(struct accel_3d_t accels[], unsigned int accel_len)
 {
 	unsigned int state_len = accel_len / NEW_NUM_FRAMES;
+	/*
 	if (accel_len % NEW_NUM_FRAMES > 1) {
 		state_len += 1;
 	}
+	//*/
 	hmm_create_3d(&hmm, state_len);
 	hmm_left_right_3d(&hmm);
 
@@ -1045,7 +1047,7 @@ static void cmd_model_new_cb(struct accel_3d_t accels[], unsigned int accel_len)
 			printf("%+f\t%+f\t%+f\n", accels[i].val[0], accels[i].val[1], accels[i].val[2]);
 		}
 	}
-	
+	/*
 	if (count > 1)
 	{
 		gauss_mix_create_3d(&hmm.output_prob[state_ind], 1);
@@ -1071,7 +1073,7 @@ static void cmd_model_new_cb(struct accel_3d_t accels[], unsigned int accel_len)
 				prev_val[1] / count, prev_val[2] / count);
 		}
 	}
-	
+	//*/
 	if (verbose) {
 		hmm_print_3d(&hmm);
 	}
