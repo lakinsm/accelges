@@ -366,7 +366,7 @@ static void recognize(struct ges_3d_t *ges, struct accel_3d_t accel[], unsigned 
 		//unsigned char possib_max_reached_final_state = 0; 
 		//double possib_max = hmm_viterbi(&ges->model[i], accel, accel_len, decoded_states);
 		vals[i] = hmm_viterbi(&ges->model[i], accel, accel_len, decoded_states);
-		printf("%s:\n", ges->model_cmd[i]);
+		printf("%s (has 0..%d states):\n", ges->model_cmd[i], ges->model[i].state_len - 1);
 		int t;
 		for (t = 0; t < accel_len; t++)
 		{
@@ -375,12 +375,12 @@ static void recognize(struct ges_3d_t *ges, struct accel_3d_t accel[], unsigned 
 		printf("\n");
 	
 		/* prune if the last state is not the final state */
-		if (0) {
+		//if (0) {
 			if (decoded_states[accel_len - 1] != ges->model[i].state_len - 1)
 			{
 				pruned[i] = 1;
 			}
-		}
+		//}
 		/* prunning by state duration! */
 		//if (!pruned[i])
 		if (0)
