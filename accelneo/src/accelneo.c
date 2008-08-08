@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2008 by OpenMoko, Inc.
- * Written by Paul-Valentin Borza <gestures@borza.ro>
+ * Copyright (C) 2008 by Openmoko, Inc.
+ * Written by Paul-Valentin Borza <paul@borza.ro>
  * All Rights Reserved
  *
  * This program is free software; you can redistribute it and/or modify
@@ -93,7 +93,7 @@ void neo_begin_read(struct neo_t *neo)
 			/* receives signed acceleration in milli-G */
 			int val_mg = *(int *)(report + 12);
 			/* convert acceleration to G */
-			float val_g = (float)val_mg / 1000;
+			float val_g = (float)val_mg / 1000.0;
 			
 			/* save to accel on the axis */
 			accel.val[axis_ind] = val_g;

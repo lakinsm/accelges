@@ -29,12 +29,13 @@
 /* should hold a continuous gesture of 5 min (which is a lot) at 100 Hz */
 #define FRAME_LEN 30000
 /* 1/5 seconds */
-#define FRAME_DIF 20
+#define FRAME_DIF 27
 /* also send to the recognizer some more frames, before the ones classified */
-#define FRAME_BEFORE 10
+#define FRAME_BEFORE 13 
 /* FRAME_AFTER is not used in this release, it would have to wait for those frames */
 /* also send to the recognizer some more frames, after the ones classified */
-#define FRAME_AFTER 10
+/* greater than 1!!! */
+#define FRAME_AFTER 9
 
 #define CLASS_TIME 60
 

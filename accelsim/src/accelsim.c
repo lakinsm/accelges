@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2008 by OpenMoko, Inc.
- * Written by Paul-Valentin Borza <gestures@borza.ro>
+ * Copyright (C) 2008 by Openmoko, Inc.
+ * Written by Paul-Valentin Borza <paul@borza.ro>
  * All Rights Reserved
  *
  * This program is free software; you can redistribute it and/or modify
@@ -23,9 +23,12 @@
 #include <stdlib.h>
 #include <sys/select.h>
 #include <unistd.h>
+#include <math.h>
 
 #include "accel.h"
 #include "accelsim.h"
+
+#define EPS 0.1
 
 /*
  * opens file to read from
@@ -53,7 +56,14 @@ void sim_begin_read(struct sim_t *sim)
 	for (i = sim->seq.begin; i <= sim->seq.end; i++)
 	{
 		if (sim->handle_recv) {
-			sim->handle_recv(1, sim->seq.each[i]);
+			/* use filtering or not (filtering doesn't work my gesture lib - for now) */
+			/*
+			if ((i > sim->seq.begin) && 
+				((fabsf(sim->seq.each[i-1].val[0] - sim->seq.each[i].val[0]) > EPS) || 
+				 (fabsf(sim->seq.each[i-1].val[1] - sim->seq.each[i].val[1]) > EPS) ||
+				 (fabsf(sim->seq.each[i-1].val[2] - sim->seq.each[i].val[2]) > EPS)))
+				//*/
+					sim->handle_recv(1, sim->seq.each[i]);
 		}
 	}
 }

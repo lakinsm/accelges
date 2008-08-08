@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2008 by OpenMoko, Inc.
- * Written by Paul-Valentin Borza <gestures@borza.ro>
+ * Copyright (C) 2008 by Openmoko, Inc.
+ * Written by Paul-Valentin Borza <paul@borza.ro>
  * All Rights Reserved
  *
  * This library is free software; you can redistribute it and/or
@@ -93,7 +93,8 @@ void ges_process_3d(struct ges_3d_t *ges, struct accel_3d_t accel)
 	sample_3d_t feature;
 	ges_fea_3d(&ges->seq, ges->seq.index, prev_index, &feature);
 	
-	//printf("%f\t%f\t%f\n", feature.val[0], feature.val[1], feature.val[2]);
+	//printf("%f\t%f\t%f\t%s\n", feature.val[0], feature.val[1], feature.val[2],
+	//	(class_max_2c(&ges->endpoint, feature) == 1) ? "DYNAMIC" : "STATIC");
 	
 	/* motion has index 1 and noise has index 0 */
 	if (class_max_2c(&ges->endpoint, feature) == 1)
@@ -107,6 +108,10 @@ void ges_process_3d(struct ges_3d_t *ges, struct accel_3d_t accel)
 
 			//ges->prev_class_time = 0;
 			//ges->prev_class_change = 0;
+		}
+		if (ges->seq.till_end < FRAME_AFTER)
+		{
+			ges->seq.till_end = FRAME_AFTER;
 		}
 	}
 	else
@@ -152,7 +157,7 @@ void ges_process_3d(struct ges_3d_t *ges, struct accel_3d_t accel)
 			ges->detected = 0;
 			ges->seq.till_end = FRAME_AFTER;
 		
-			//printf("Gesture detected with size: %d\n", ges->seq.end - ges->seq.begin + 1 - FRAME_AFTER);
+			printf("detected with size: %d\n", ges->seq.end - ges->seq.begin + 1 - FRAME_AFTER);
 				 
 			/* case when begin < end */
 			if (ges->seq.begin < ges->seq.end)
@@ -361,13 +366,13 @@ static void recognize(struct ges_3d_t *ges, struct accel_3d_t accel[], unsigned 
 		//unsigned char possib_max_reached_final_state = 0; 
 		//double possib_max = hmm_viterbi(&ges->model[i], accel, accel_len, decoded_states);
 		vals[i] = hmm_viterbi(&ges->model[i], accel, accel_len, decoded_states);
-		//printf("%s:\n", ges->model_cmd[i]);
-		//int t;
-		//for (t = 0; t < accel_len; t++)
-		//{
-		//	printf("%d", decoded_states[t]);
-		//}
-		//printf("\n");
+		printf("%s:\n", ges->model_cmd[i]);
+		int t;
+		for (t = 0; t < accel_len; t++)
+		{
+			printf("%d", decoded_states[t]);
+		}
+		printf("\n");
 	
 		/* prune if the last state is not the final state */
 		if (0) {
