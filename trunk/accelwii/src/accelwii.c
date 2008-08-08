@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2008 by OpenMoko, Inc.
- * Written by Paul-Valentin Borza <gestures@borza.ro>
+ * Copyright (C) 2008 by Openmoko, Inc.
+ * Written by Paul-Valentin Borza <paul@borza.ro>
  * All Rights Reserved
  *
  * This program is free software; you can redistribute it and/or modify
@@ -27,8 +27,11 @@
 #include <bluetooth/hci.h>
 #include <bluetooth/hci_lib.h>
 #include <bluetooth/l2cap.h>
+#include <math.h>
 
 #include "accelwii.h"
+
+#define EPS 0.05
 
 /* cycle that reads reports from the Wii */
 static void wii_read(struct wii_t *wii);
@@ -244,6 +247,12 @@ static void wii_read(struct wii_t *wii)
 	const unsigned int report_len = 23;
 	unsigned char report[report_len];
 	
+	struct accel_3d_t prev_accel;
+  prev_accel.val[0] = 0.0;
+	prev_accel.val[1] = 0.0;
+	prev_accel.val[2] = 0.0;	
+	unsigned char received_once = 0;
+
 	if (!wii)
 	{
 		return;
@@ -272,10 +281,22 @@ static void wii_read(struct wii_t *wii)
 				accel.val[0] = ((float)(report[4] - wii->cal_zero.val[0])) / ((float)(wii->cal_one.val[0] - wii->cal_zero.val[0]));
 				accel.val[1] = ((float)(report[5] - wii->cal_zero.val[1])) / ((float)(wii->cal_one.val[1] - wii->cal_zero.val[1]));
 				accel.val[2] = ((float)(report[6] - wii->cal_zero.val[2])) / ((float)(wii->cal_one.val[2] - wii->cal_zero.val[2]));
-				
-				/* make callback to the function that handles accelertion */
-				wii->handle_recv(pressed, accel);
-				
+				/* filtering is not currently supported with gestures lib */		
+				/*
+				if ((received_once) &&
+					 ((fabsf(prev_accel.val[0] - accel.val[0]) > EPS) ||
+						(fabsf(prev_accel.val[1] - accel.val[1]) > EPS) ||
+						(fabsf(prev_accel.val[2] - accel.val[2]) > EPS)))
+				//*/
+					/* make callback to the function that handles accelertion */
+					wii->handle_recv(pressed, accel);
+			/*
+				if (!received_once)
+					received_once = 1;	
+//*/
+				prev_accel = accel;
+				//printf("%+f\t%+f\t%+f\n", accel.val[0], accel.val[1], accel.val[2]);
+
 				break;
 			case WII_RPT_READ:
 				/* read calibration data */
