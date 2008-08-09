@@ -141,8 +141,8 @@ void *main_dbus(void *arg)
  */
 void recognized_cb(char *id)
 {
-	printf("Recognized: %s\n", id);
-	fflush(stdout);
+	//printf("Recognized: %s\n", id);
+	//fflush(stdout);
 	
 	/* call dbus signal */
 	if (reco) {
