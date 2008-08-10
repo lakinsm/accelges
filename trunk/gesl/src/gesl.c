@@ -91,8 +91,14 @@ void recognized_cb(DBusGProxy *proxy, const char *id,
 	} else {
 		/* gesture that has no action associated */
 		char body[512];
-		sprintf(body, "notify-send --icon='" PIXDIR "/accelges.png' 'Recognized' 'Neo Freerunner has recognized an accelerometer-based gesture:	<b>%s</b>'", id);
+		//sprintf(body, "notify-send --icon='" PIXDIR "/accelges.png' 'Recognized' 'Neo Freerunner has recognized an accelerometer-based gesture:	<b>%s</b>'", id);
+		sprintf(body, "notify-send 'Recognized' 'Neo Freerunner has recognized an accelerometer-based gesture:	<b>%s</b>'", id);
 		system(body);
+		if (strcmp(id, "forward-backward") == 0) {
+			system("mdbus -s org.freesmartphone.ophoned /org/freesmartphone/GSM/Device org.freesmartphone.GSM.Call.Release 1");
+		} else if (strcmp(id, "shake-shake") == 0) {
+			system("mdbus -s org.freesmartphone.ophoned /org/freesmartphone/GSM/Device org.freesmartphone.GSM.Call.Activate 1");
+		}
 		//printf("Gesture '%s'\n", id);
 		//fflush(stdout);
 	}
