@@ -40,7 +40,8 @@ enum
 	COLUMN_LEN
 };
 
-static GtkWidget *label = 0;
+//static GtkWidget *label = 0;
+static GtkWidget *bar = 0;
 static GtkWidget *treeview = 0;
 static GtkWidget *train_toolbutton = 0;
 /* this is the thread that is used for training */
@@ -66,9 +67,9 @@ void on_refresh_toolbutton_clicked (GtkObject *object, gpointer user_data);
 /* */
 void update_gui(char *msg)
 {
-	if (label) {
+	if (bar) {
 		gdk_threads_enter();  // Protect from gtk main loop
-		gtk_label_set_text(GTK_LABEL (label), msg);
+		gtk_progress_bar_set_text(GTK_PROGRESS_BAR (bar), msg);
 		gdk_flush();
 		gdk_threads_leave();
 		/* kinf of ugly way to know that the other thread has been canceled, or has finished processing, but works */
@@ -93,7 +94,8 @@ void main_gui (int argc, char *argv[])
 	/* get a widget (useful if you want to change something) */
 	window = glade_xml_get_widget(xml, "window");
 	treeview = glade_xml_get_widget(xml, "treeview");
-	label = glade_xml_get_widget(xml, "label");
+	//label = glade_xml_get_widget(xml, "label");
+	bar = glade_xml_get_widget(xml, "bar");
 	train_toolbutton = glade_xml_get_widget(xml, "train_toolbutton");
 
 	/* connect signal handlers */
