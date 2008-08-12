@@ -42,6 +42,8 @@ static void wii_req_cal(struct wii_t *wii);
 /* request continuous acceleration reports */
 static void wii_req_cont_accel(struct wii_t *wii);
 
+static unsigned char go_on = 1;
+
 /* 
  * initialize the Wii
  */
@@ -176,6 +178,8 @@ int wii_connect(struct wii_t *wii)
 		return -1;
 	}
 	
+	go_on = 1;
+
 	return 0;
 }
 
@@ -189,6 +193,8 @@ void wii_disconnect(struct wii_t *wii)
 		return;
 	}
 	
+	go_on = 0;
+
 	close(wii->in_sock);
 	close(wii->out_sock);
 	
@@ -258,7 +264,7 @@ static void wii_read(struct wii_t *wii)
 		return;
 	}
 	
-	while (1)
+	while (go_on)
 	{
 		if (read(wii->in_sock, report, report_len) < 0)
 		{

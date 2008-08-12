@@ -26,6 +26,8 @@
 
 #include "accelneo.h"
 
+static unsigned char go_on = 1;
+
 /*
  * opens one accelerometer and the touchscreen
  */
@@ -46,6 +48,7 @@ unsigned char neo_open(struct neo_t *neo, enum neo_accel w_accel)
 	if ((neo->accel_desc < 0) || (neo->screen_desc < 0)) {
 		return 0;
 	} else {
+		go_on = 1;
 		return 1;
 	}
 }
@@ -55,6 +58,7 @@ unsigned char neo_open(struct neo_t *neo, enum neo_accel w_accel)
  */
 void neo_close(struct neo_t *neo)
 {
+	go_on = 0;
 	close(neo->accel_desc);
 	close(neo->screen_desc);
 }
@@ -72,7 +76,7 @@ void neo_begin_read(struct neo_t *neo)
 	accel.val[1] = 0.0;
 	accel.val[2] = 0.0;
 	
-	while (1)
+	while (go_on)
 	{
 		int read_len = read(neo->accel_desc, report, report_len);
 		/* this was a blocking read */

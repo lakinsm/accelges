@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <!DOCTYPE glade-interface SYSTEM "glade-2.0.dtd">
-<!--Generated with glade3 3.4.5 on Mon Aug 11 20:01:19 2008 -->
+<!--Generated with glade3 3.4.5 on Mon Aug 11 20:27:55 2008 -->
 <glade-interface>
   <widget class="GtkWindow" id="window">
     <property name="title" translatable="yes">Gestures</property>
@@ -48,6 +48,16 @@
           </packing>
         </child>
         <child>
+          <widget class="GtkProgressBar" id="bar">
+            <property name="visible">True</property>
+            <property name="text" translatable="yes">Select a gesture</property>
+          </widget>
+          <packing>
+            <property name="expand">False</property>
+            <property name="position">1</property>
+          </packing>
+        </child>
+        <child>
           <widget class="GtkScrolledWindow" id="scrolledwindow">
             <property name="visible">True</property>
             <property name="can_focus">True</property>
@@ -60,16 +70,6 @@
                 <property name="headers_clickable">True</property>
               </widget>
             </child>
-          </widget>
-          <packing>
-            <property name="position">1</property>
-          </packing>
-        </child>
-        <child>
-          <widget class="GtkProgressBar" id="bar">
-            <property name="visible">True</property>
-            <property name="text" translatable="yes">Train</property>
-            <property name="ellipsize">PANGO_ELLIPSIZE_END</property>
           </widget>
           <packing>
             <property name="position">2</property>
