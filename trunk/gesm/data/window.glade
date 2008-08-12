@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <!DOCTYPE glade-interface SYSTEM "glade-2.0.dtd">
-<!--Generated with glade3 3.4.5 on Mon Aug 11 20:27:55 2008 -->
+<!--Generated with glade3 3.4.5 on Tue Aug 12 19:45:19 2008 -->
 <glade-interface>
   <widget class="GtkWindow" id="window">
     <property name="title" translatable="yes">Gestures</property>
@@ -14,7 +14,7 @@
             <child>
               <widget class="GtkToolButton" id="train_toolbutton">
                 <property name="visible">True</property>
-                <property name="label" translatable="yes">Train</property>
+                <property name="label" translatable="yes">Adapt</property>
                 <property name="stock_id">gtk-edit</property>
                 <signal name="clicked" handler="on_train_toolbutton_clicked"/>
               </widget>
@@ -50,7 +50,8 @@
         <child>
           <widget class="GtkProgressBar" id="bar">
             <property name="visible">True</property>
-            <property name="text" translatable="yes">Select a gesture</property>
+            <property name="text" translatable="yes">Please select a gesture</property>
+            <property name="ellipsize">PANGO_ELLIPSIZE_MIDDLE</property>
           </widget>
           <packing>
             <property name="expand">False</property>

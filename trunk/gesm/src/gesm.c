@@ -57,6 +57,8 @@ static unsigned char detected;
 static struct gauss_mix_3d_t gauss_mix;
 static struct hmm_3d_t hmm;
 
+static float percentage;
+
 /* vars from arguments that are used in callbacks */
 static unsigned char verbose;
 static unsigned char confirm;
@@ -264,6 +266,10 @@ int main(int argc, char *argv[])
 void handshake(char cmd)
 {
 	char *p;
+
+	if (cmd == 'n') {
+		percentage = 0.0;
+	}
 	/* device handshake */
 	if ((cmd != 'g') && (cmd != 'o')) /* ! --gui and ! --view */
 	{
@@ -273,7 +279,8 @@ void handshake(char cmd)
 				printf("Searching... (Press 1 and 2 on the Wii)\n");
 				fflush(stdout);
 				if (g_mode == graphical) {
-					update_gui("Press 1 and 2 on the Wii");
+					percentage += 0.1;
+					update_gui("Press 1 and 2 on the Wii", percentage);
 				}
 				if (wii_search(&wii, 5) < 0) {
 					fprintf(stderr, "Could not find the Wii.\n");
@@ -291,7 +298,12 @@ void handshake(char cmd)
 				printf("Connected.\n");
 				fflush(stdout);
 				if (g_mode == graphical) {
-					update_gui("Connected");
+					percentage += 0.1;
+					if (percentage < 0.5) {
+						update_gui("Make the gesture", percentage);
+					} else {
+						update_gui("Make the same gesture again", percentage);
+					}
 				}
 				wii_set_leds(&wii, 0, 0, 0, 1);
 			
@@ -308,7 +320,12 @@ void handshake(char cmd)
 				printf("Connected.\n");
 				fflush(stdout);
 				if (g_mode == graphical) {
-					update_gui("Connected");
+					percentage += 0.2;
+					if (percentage < 0.5) {
+						update_gui("Make the gesture", percentage);
+					} else {
+						update_gui("Make the same gesture again", percentage);
+					}
 				}
 				
 				signal(SIGALRM, neo_signal_cb);
@@ -324,7 +341,12 @@ void handshake(char cmd)
 				printf("Connected.\n");
 				fflush(stdout);
 				if (g_mode == graphical) {
-					update_gui("Connected");
+					percentage += 0.2;
+					if (percentage < 0.5) {
+						update_gui("Make the gesture", percentage);
+					} else {
+						update_gui("Make the same gesture again", percentage);
+					} 
 				}
 				
 				signal(SIGALRM, neo_signal_cb);
@@ -574,14 +596,24 @@ static void dev_close(enum device dev)
 		printf("Disconnected.\n");
 		fflush(stdout);
 		if (g_mode == graphical) {
-			update_gui("Disconnected");
+			percentage += 0.1;
+			if (percentage < 0.7) {
+				update_gui("Gesture was created", percentage);
+			} else {
+				update_gui("Gesture was trained", percentage);
+			}
 		}
 	} else if ((dev == dev_neo2) || (dev == dev_neo3)) 	{
 		neo_close(&neo);
 		printf("Closed.\n");
 		fflush(stdout);
 		if (g_mode == graphical) {
-			update_gui("Closed");
+			percentage += 0.1;
+			if (percentage < 0.7) {
+				update_gui("Gesture was created", percentage);
+			} else {
+				update_gui("Gesture was trained", percentage);
+			}
 		}
 	} else if (dev == dev_sim) {
 		sim_close(&sim);
@@ -1103,7 +1135,8 @@ static void cmd_model_new_end(char *file)
 	printf("Done.\n");
 	fflush(stdout);
 	if (g_mode == graphical) {
-		update_gui("Done");
+		percentage += 0.2;
+		update_gui("Done creating gesture", percentage);
 	}
 	
 	gauss_mix_delete_3d(&endpoint.each[0]);
@@ -1166,7 +1199,7 @@ static void cmd_model_train_cb(struct accel_3d_t accels[], unsigned int accel_le
 		cmd_model_train_end(file);
 		
 		/* we're done */
-		kill(getpid(), SIGTERM);
+		//kill(getpid(), SIGTERM);
 	}
 	else
 	{
@@ -1187,7 +1220,8 @@ static void cmd_model_train_end(char *file)
 	printf("Done.\n");
 	fflush(stdout);
 	if (g_mode == graphical) {
-		update_gui("Done");
+		percentage += 0.2;
+		update_gui("Done training gesture", percentage);
 	}
 	
 	gauss_mix_delete_3d(&endpoint.each[0]);
@@ -1196,7 +1230,7 @@ static void cmd_model_train_end(char *file)
 	
 	if (g_mode == graphical) {
 		dev_close(g_dev);
-		pthread_exit(0);
+		//pthread_exit(0);
 	} else {
 		kill(getpid(), SIGTERM);
 	}	
