@@ -64,12 +64,20 @@ void on_train_toolbutton_clicked (GtkObject *object, gpointer user_data);
 /* */
 void on_refresh_toolbutton_clicked (GtkObject *object, gpointer user_data);
 
+void update_gui_same_thread(char *msg)
+{
+	if (bar) {
+		gtk_progress_bar_set_text(GTK_PROGRESS_BAR (bar), msg);
+	}
+}
+
 /* */
 void update_gui(char *msg)
 {
 	if (bar) {
 		gdk_threads_enter();  // Protect from gtk main loop
 		gtk_progress_bar_set_text(GTK_PROGRESS_BAR (bar), msg);
+
 		gdk_flush();
 		gdk_threads_leave();
 		/* kinf of ugly way to know that the other thread has been canceled, or has finished processing, but works */
@@ -202,7 +210,8 @@ void on_window_destroy (GtkObject *object, gpointer user_data)
  */
 void *train_clicked (void *arg)
 {
-	handshake('e');
+	handshake('n'); /* recreate gesture */
+	handshake('e'); /* train existing gesture */
 	return 0;
 }
 
@@ -227,11 +236,15 @@ void on_train_toolbutton_clicked (GtkObject *object, gpointer user_data)
 		strcpy(file, name);
 		pthread_create(&thread, 0, train_clicked, 0);
 
+		//char *result;
+		//pthread_join(thread, &result);
+		//printf("returned from thread");
+
 		g_free(name);
 	}
 	else
 	{
-		update_gui ("Please select a model first");
+		update_gui_same_thread ("Please select a model first");
 	}
 }
 

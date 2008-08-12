@@ -1112,7 +1112,7 @@ static void cmd_model_new_end(char *file)
 	
 	if (g_mode == graphical) {
 		dev_close(g_dev);
-		pthread_exit(0);
+		//pthread_exit(0); /* don't exit, as we probably going to train the gesture */
 	} else {
 		kill(getpid(), SIGTERM);
 	}
