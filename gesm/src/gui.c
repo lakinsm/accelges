@@ -64,28 +64,32 @@ void on_train_toolbutton_clicked (GtkObject *object, gpointer user_data);
 /* */
 void on_refresh_toolbutton_clicked (GtkObject *object, gpointer user_data);
 
-void update_gui_same_thread(char *msg)
+void update_gui_same_thread(char *msg, double p)
 {
 	if (bar) {
 		gtk_progress_bar_set_text(GTK_PROGRESS_BAR (bar), msg);
+		gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR (bar), p);
 	}
 }
 
 /* */
-void update_gui(char *msg)
+void update_gui(char *msg, float p)
 {
 	if (bar) {
 		gdk_threads_enter();  // Protect from gtk main loop
-		gtk_progress_bar_set_text(GTK_PROGRESS_BAR (bar), msg);
-
+		gtk_progress_bar_set_text (GTK_PROGRESS_BAR (bar), msg);
+		gtk_progress_bar_set_fraction (GTK_PROGRESS_BAR (bar), p);
 		gdk_flush();
 		gdk_threads_leave();
 		/* kinf of ugly way to know that the other thread has been canceled, or has finished processing, but works */
-		if ((strcmp(msg, "Disconnected") == 0) ||
-			(strcmp(msg, "Closed") == 0)) {
+		//if ((strcmp(msg, "Disconnected") == 0) ||
+		//	(strcmp(msg, "Closed") == 0)) {
+		//printf("%f\n", p);
+		//if (gtk_progress_bar_get_fraction (GTK_PROGRESS_BAR (bar)) == 1.0)
+		if (p == 1.0) {
 			gtk_widget_set_sensitive(train_toolbutton, TRUE);
-		}
-	}	
+		}	
+	}
 }
 
 /* graphical user interface */
@@ -211,7 +215,10 @@ void on_window_destroy (GtkObject *object, gpointer user_data)
 void *train_clicked (void *arg)
 {
 	handshake('n'); /* recreate gesture */
+	sleep(2);
 	handshake('e'); /* train existing gesture */
+	sleep(2);
+	update_gui("Done, select another one", 0.0);
 	return 0;
 }
 
@@ -244,7 +251,7 @@ void on_train_toolbutton_clicked (GtkObject *object, gpointer user_data)
 	}
 	else
 	{
-		update_gui_same_thread ("Please select a model first");
+		update_gui_same_thread ("Please select a gesture", 0.0);
 	}
 }
 

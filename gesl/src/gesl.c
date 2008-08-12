@@ -94,11 +94,13 @@ void recognized_cb(DBusGProxy *proxy, const char *id,
 		//sprintf(body, "notify-send --icon='" PIXDIR "/accelges.png' 'Recognized' 'Neo Freerunner has recognized an accelerometer-based gesture:	<b>%s</b>'", id);
 		sprintf(body, "notify-send 'Recognized' 'Neo Freerunner has recognized an accelerometer-based gesture:	<b>%s</b>'", id);
 		system(body);
+		/*
 		if (strcmp(id, "forward-backward") == 0) {
 			system("mdbus -s org.freesmartphone.ophoned /org/freesmartphone/GSM/Device org.freesmartphone.GSM.Call.Release 1");
 		} else if (strcmp(id, "shake-shake") == 0) {
 			system("mdbus -s org.freesmartphone.ophoned /org/freesmartphone/GSM/Device org.freesmartphone.GSM.Call.Activate 1");
 		}
+		*/
 		//printf("Gesture '%s'\n", id);
 		//fflush(stdout);
 	}
@@ -237,6 +239,7 @@ int main (int argc, char **argv)
 //	dbus_g_proxy_connect_signal(proxy2, "CallStatus",
 //		G_CALLBACK(call_status_cb), conn, 0);
 	
+	/*
 	dbus_error_init(&error2);
 	conn2 = dbus_bus_get(DBUS_BUS_SYSTEM, &error2);
 	if (!conn2)
@@ -245,11 +248,12 @@ int main (int argc, char **argv)
 		dbus_error_free (&error2);
 	}
 	dbus_connection_setup_with_g_main (conn2, NULL);
-
+	*/
 	/* listening to messages from all objects as no path is specified */
+	/*
 	dbus_bus_add_match (conn2, "type='signal', interface='" DBUS_GSM_CALL_NAME "'", &error2);
 	dbus_connection_add_filter (conn2, signal_filter, loop, 0);
-
+	*/
 
 	g_print("Listening for signals on: '%s'\n", DBUS_SERVICE_NAME);
 	

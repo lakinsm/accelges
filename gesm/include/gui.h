@@ -26,6 +26,6 @@
 
 /* graphical user interface */
 void main_gui(int argc, char *argv[]);
-void update_gui(char *msg);
+void update_gui(char *msg, float percentage);
 
 #endif /*GUI_H_*/
