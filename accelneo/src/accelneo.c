@@ -26,7 +26,7 @@
 
 #include "accelneo.h"
 
-static unsigned char go_on = 1;
+static unsigned char go_on;
 
 /*
  * opens one accelerometer and the touchscreen
@@ -118,3 +118,4 @@ void neo_begin_read(struct neo_t *neo)
 		}
 	}
 }
+

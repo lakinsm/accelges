@@ -396,6 +396,7 @@ void handshake(char cmd)
 		case 'e': /* --train */
 			chdir(dir);
 			p = rindex(file, '.');
+			
 			if ((p) && (strcmp(p, ".class") == 0)) { /* class */
 				if (cmd == 'n') { /* --new class */
 					wii.handle_recv = cmd_class_cb;
@@ -906,6 +907,9 @@ static void cmd_class_view_end(char *file)
  */
 static void cmd_model_cb(unsigned char pressed, struct accel_3d_t accel)
 {
+	if (verbose) {
+		printf("%+f\t%+f\t%+f\n", accel.val[0], accel.val[1], accel.val[2]);
+	}
 	/* increment and save current frame (uses a circular list) */
 	unsigned int prev_index = seq.index;
 	seq.index = (seq.index + 1) % FRAME_LEN;
@@ -1014,6 +1018,9 @@ static void cmd_model_new_begin(char *file)
 	seq.index = 0;
 	detected = 0;
 	seq.till_end = FRAME_AFTER;
+	// added after
+	seq.begin = 0;
+	seq.end = 0;
 }
 
 /*
@@ -1021,7 +1028,10 @@ static void cmd_model_new_begin(char *file)
  */
 static void cmd_model_new_cb(struct accel_3d_t accels[], unsigned int accel_len)
 {
+	printf("entered cmd_model_new_cb\n");
+	fflush(stdout);
 	unsigned int state_len = accel_len / NEW_NUM_FRAMES;
+
 	/*
 	if (accel_len % NEW_NUM_FRAMES > 1) {
 		state_len += 1;
@@ -1124,6 +1134,8 @@ static void cmd_model_new_cb(struct accel_3d_t accels[], unsigned int accel_len)
 	seq.index = 0;
 	detected = 0;
 	seq.till_end = FRAME_AFTER;
+	seq.begin = 0;
+	seq.end = 0;
 }
 
 /*
@@ -1149,6 +1161,12 @@ static void cmd_model_new_end(char *file)
 	} else {
 		kill(getpid(), SIGTERM);
 	}
+
+	seq.index = 0;
+	detected = 0;
+	seq.till_end = FRAME_AFTER;
+	seq.begin = 0;
+	seq.end = 0;
 }
 
 /*
@@ -1173,6 +1191,8 @@ static void cmd_model_train_begin(char *file)
 	seq.index = 0;
 	detected = 0;
 	seq.till_end = FRAME_AFTER;
+	seq.begin = 0;
+	seq.end = 0;
 }
 
 /*
@@ -1180,6 +1200,16 @@ static void cmd_model_train_begin(char *file)
  */
 static void cmd_model_train_cb(struct accel_3d_t accels[], unsigned int accel_len)
 {
+	printf("Received accels:!!!!!!!!!\n");
+	int j;
+	for (j = 0; j < accel_len; j++)
+	{
+		printf("%+f\t%+f\t%+f\n", accels[j].val[0], accels[j].val[1], accels[j].val[2]);
+	}
+	fflush(stdout);
+
+	printf("entered cmd_model_train_cb\n");
+	fflush(stdout);
 	int i;
 	hmm_3d_t hmm_est;
 	hmm_create_3d(&hmm_est, hmm.state_len);
@@ -1187,7 +1217,11 @@ static void cmd_model_train_cb(struct accel_3d_t accels[], unsigned int accel_le
 	{
 		gauss_mix_create_3d(&hmm_est.output_prob[i], hmm.output_prob[i].mix_len);
 	}
+	printf("BEFORE");
+	hmm_print_3d(&hmm_est);
+	printf("AFTER");
 	hmm_baum_welch(&hmm, &hmm_est, accels, accel_len);
+
 
 	if (verbose) {
 		hmm_print_3d(&hmm_est);
@@ -1209,6 +1243,8 @@ static void cmd_model_train_cb(struct accel_3d_t accels[], unsigned int accel_le
 	seq.index = 0;
 	detected = 0;
 	seq.till_end = FRAME_AFTER;
+	seq.begin = 0;
+	seq.end = 0;
 }
 
 /*
@@ -1233,7 +1269,13 @@ static void cmd_model_train_end(char *file)
 		//pthread_exit(0);
 	} else {
 		kill(getpid(), SIGTERM);
-	}	
+	}
+
+	seq.index = 0;
+	detected = 0;
+	seq.till_end = FRAME_AFTER;
+	seq.begin = 0;
+	seq.end = 0;
 }
 
 /*

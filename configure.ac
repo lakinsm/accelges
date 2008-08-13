@@ -37,7 +37,7 @@ PKG_CHECK_MODULES(GLADE, [libglade-2.0])
 PKG_CHECK_MODULES(GTK, [gtk+-2.0])
 PKG_CHECK_MODULES(CURL, [libcurl])
 
-CFLAGS="-Wall $CFLAGS"
+CFLAGS="-Wall -g $CFLAGS"
 
 AC_OUTPUT([
 makefile

@@ -381,3 +381,4 @@ static void wii_req_cont_accel(struct wii_t *wii)
 	
 	wii_write(wii, report, report_len);
 }
+
