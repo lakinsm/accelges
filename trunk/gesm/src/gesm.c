@@ -1028,8 +1028,8 @@ static void cmd_model_new_begin(char *file)
  */
 static void cmd_model_new_cb(struct accel_3d_t accels[], unsigned int accel_len)
 {
-	printf("entered cmd_model_new_cb\n");
-	fflush(stdout);
+	//printf("entered cmd_model_new_cb\n");
+	//fflush(stdout);
 	unsigned int state_len = accel_len / NEW_NUM_FRAMES;
 
 	/*
@@ -1200,16 +1200,16 @@ static void cmd_model_train_begin(char *file)
  */
 static void cmd_model_train_cb(struct accel_3d_t accels[], unsigned int accel_len)
 {
-	printf("Received accels:!!!!!!!!!\n");
-	int j;
-	for (j = 0; j < accel_len; j++)
-	{
-		printf("%+f\t%+f\t%+f\n", accels[j].val[0], accels[j].val[1], accels[j].val[2]);
-	}
-	fflush(stdout);
+	//printf("Received accels:!!!!!!!!!\n");
+	//int j;
+	//for (j = 0; j < accel_len; j++)
+	//{
+	//	printf("%+f\t%+f\t%+f\n", accels[j].val[0], accels[j].val[1], accels[j].val[2]);
+	//}
+	//fflush(stdout);
 
-	printf("entered cmd_model_train_cb\n");
-	fflush(stdout);
+	//printf("entered cmd_model_train_cb\n");
+	//fflush(stdout);
 	int i;
 	hmm_3d_t hmm_est;
 	hmm_create_3d(&hmm_est, hmm.state_len);
@@ -1217,9 +1217,9 @@ static void cmd_model_train_cb(struct accel_3d_t accels[], unsigned int accel_le
 	{
 		gauss_mix_create_3d(&hmm_est.output_prob[i], hmm.output_prob[i].mix_len);
 	}
-	printf("BEFORE");
-	hmm_print_3d(&hmm_est);
-	printf("AFTER");
+	//printf("BEFORE");
+	//hmm_print_3d(&hmm_est);
+	//printf("AFTER");
 	hmm_baum_welch(&hmm, &hmm_est, accels, accel_len);
 
 
