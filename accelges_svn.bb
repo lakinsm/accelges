@@ -3,7 +3,7 @@ SECTION = "openmoko/utilities"
 
 PN = "accelges"
 PV = "0.1.0+svnr${SRCREV}"
-PR = "r4"
+PR = "r3"
 DEPENDS = "dbus dbus-glib libxrandr libnotify notification-daemon curl gtk+"
 RDEPENDS = "dbus dbus-glib libxrandr libnotify notification-daemon libcurl gtk+"
 
