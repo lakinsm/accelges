@@ -79,6 +79,10 @@ void update_gui(char *msg, float p)
 		gdk_threads_enter();  // Protect from gtk main loop
 		gtk_progress_bar_set_text (GTK_PROGRESS_BAR (bar), msg);
 		gtk_progress_bar_set_fraction (GTK_PROGRESS_BAR (bar), p);
+		if (p == 1.0) {
+			gtk_widget_set_sensitive(train_toolbutton, TRUE);
+		}	
+	
 		gdk_flush();
 		gdk_threads_leave();
 		/* kinf of ugly way to know that the other thread has been canceled, or has finished processing, but works */
@@ -86,9 +90,6 @@ void update_gui(char *msg, float p)
 		//	(strcmp(msg, "Closed") == 0)) {
 		//printf("%f\n", p);
 		//if (gtk_progress_bar_get_fraction (GTK_PROGRESS_BAR (bar)) == 1.0)
-		if (p == 1.0) {
-			gtk_widget_set_sensitive(train_toolbutton, TRUE);
-		}	
 	}
 }
 

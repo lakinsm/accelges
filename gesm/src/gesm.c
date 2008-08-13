@@ -1030,7 +1030,9 @@ static void cmd_model_new_cb(struct accel_3d_t accels[], unsigned int accel_len)
 {
 	//printf("entered cmd_model_new_cb\n");
 	//fflush(stdout);
-	unsigned int state_len = accel_len / NEW_NUM_FRAMES;
+	/* WAS bug here: ex: 81/9 = 9 states, but 0..80, 81 won't be reached */
+	/* empty state was created, not populated, SEG FAULT */
+	unsigned int state_len = (accel_len - 1) / NEW_NUM_FRAMES;
 
 	/*
 	if (accel_len % NEW_NUM_FRAMES > 1) {
@@ -1143,6 +1145,12 @@ static void cmd_model_new_cb(struct accel_3d_t accels[], unsigned int accel_len)
  */
 static void cmd_model_new_end(char *file)
 {
+	printf("reached cmd_model_new_end\n");
+	fflush(stdout);
+	//hmm_print_3d(&hmm);
+	printf("state len: %d\n", hmm.state_len);
+	printf("wrote HMM\n");
+	fflush(stdout);
 	hmm_write_3d(&hmm, file);
 	printf("Done.\n");
 	fflush(stdout);
@@ -1150,11 +1158,7 @@ static void cmd_model_new_end(char *file)
 		percentage += 0.2;
 		update_gui("Done creating gesture", percentage);
 	}
-	
-	gauss_mix_delete_3d(&endpoint.each[0]);
-	gauss_mix_delete_3d(&endpoint.each[1]);
-	hmm_delete_3d(&hmm);
-	
+
 	if (g_mode == graphical) {
 		dev_close(g_dev);
 		//pthread_exit(0); /* don't exit, as we probably going to train the gesture */
@@ -1162,6 +1166,10 @@ static void cmd_model_new_end(char *file)
 		kill(getpid(), SIGTERM);
 	}
 
+	gauss_mix_delete_3d(&endpoint.each[0]);
+	gauss_mix_delete_3d(&endpoint.each[1]);
+	hmm_delete_3d(&hmm);
+	
 	seq.index = 0;
 	detected = 0;
 	seq.till_end = FRAME_AFTER;
@@ -1252,6 +1260,8 @@ static void cmd_model_train_cb(struct accel_3d_t accels[], unsigned int accel_le
  */
 static void cmd_model_train_end(char *file)
 {
+	printf("reached cmd_model_train_end\n");
+	fflush(stdout);
 	hmm_write_3d(&hmm, file);
 	printf("Done.\n");
 	fflush(stdout);
@@ -1260,10 +1270,6 @@ static void cmd_model_train_end(char *file)
 		update_gui("Done training gesture", percentage);
 	}
 	
-	gauss_mix_delete_3d(&endpoint.each[0]);
-	gauss_mix_delete_3d(&endpoint.each[1]);
-	hmm_delete_3d(&hmm);
-	
 	if (g_mode == graphical) {
 		dev_close(g_dev);
 		//pthread_exit(0);
@@ -1271,6 +1277,10 @@ static void cmd_model_train_end(char *file)
 		kill(getpid(), SIGTERM);
 	}
 
+	gauss_mix_delete_3d(&endpoint.each[0]);
+	gauss_mix_delete_3d(&endpoint.each[1]);
+	hmm_delete_3d(&hmm);
+	
 	seq.index = 0;
 	detected = 0;
 	seq.till_end = FRAME_AFTER;
