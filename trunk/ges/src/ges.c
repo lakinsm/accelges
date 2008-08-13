@@ -220,6 +220,9 @@ void ges_create_3d(struct ges_3d_t *ges)
 	ges->prev_class_ind = -1;
 	ges->prev_class_change = 1;
 	ges->prev_class_time = 0;
+
+	//ges->endpoint.each[0] = 0;
+	//ges->endpoint.each[1] = 0;
 	/* do not create here, will be created during reading from files */
 	//gauss_mix_create_3d(&ges->endpoint.each[0], 1);
 	//gauss_mix_create_3d(&ges->endpoint.each[1], 1);
@@ -230,8 +233,12 @@ void ges_create_3d(struct ges_3d_t *ges)
  */
 void ges_delete_3d(struct ges_3d_t *ges)
 {
-	gauss_mix_delete_3d(&ges->endpoint.each[0]);
-	gauss_mix_delete_3d(&ges->endpoint.each[1]);
+	//if (ges->endpoint.each[0]) {
+		gauss_mix_delete_3d(&ges->endpoint.each[0]);
+	//}
+	//if (ges->endpoint.each[1]) {
+		gauss_mix_delete_3d(&ges->endpoint.each[1]);
+	//}
 }
 
 /* 

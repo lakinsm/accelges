@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2008 by OpenMoko, Inc.
- * Written by Paul-Valentin Borza <gestures@borza.ro>
+ * Copyright (C) 2008 by Openmoko, Inc.
+ * Written by Paul-Valentin Borza <paul@borza.ro>
  * All Rights Reserved
  *
  * This library is free software; you can redistribute it and/or
@@ -43,6 +43,19 @@ void gauss_mix_create_3d(struct gauss_mix_3d_t *gauss_mix, unsigned int mix_len)
 	gauss_mix->mix_len = mix_len;
 	gauss_mix->weight = (double *)malloc(mix_len * sizeof(double));
 	gauss_mix->each = (struct gauss_3d_t *)malloc(mix_len * sizeof(struct gauss_3d_t));
+
+	int i;
+	for (i = 0; i < mix_len; i++)
+	{
+		gauss_mix->weight[i] = 0.0;
+		int j, k;
+		for (j = 0; j < 3; j++) {
+			gauss_mix->each[i].mean[j] = 0.0;
+			for (k = 0; k < 3; k++) {
+				gauss_mix->each[i].covar[j][k] = 0.0;
+			}
+		}
+	}
 }
 
 /*

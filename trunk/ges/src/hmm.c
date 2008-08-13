@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2008 by OpenMoko, Inc.
- * Written by Paul-Valentin Borza <gestures@borza.ro>
+ * Copyright (C) 2008 by Openmoko, Inc.
+ * Written by Paul-Valentin Borza <paul@borza.ro>
  * All Rights Reserved
  *
  * This library is free software; you can redistribute it and/or
@@ -661,6 +661,15 @@ void hmm_create_3d(struct hmm_3d_t *hmm, unsigned int state_len)
 	}
 	
 	hmm->output_prob = (gauss_mix_3d_t *)malloc(hmm->state_len * sizeof(gauss_mix_3d_t));
+
+	int j;
+	for (i = 0; i < state_len; i++)
+	{
+		hmm->initial_prob[i] = 0.0;
+		for (j = 0; j < state_len; j++) {
+			hmm->trans_prob[i][j] = 0.0;
+		}
+	}
 }
 
 /*
