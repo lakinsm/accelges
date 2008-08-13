@@ -303,6 +303,7 @@ void hmm_baum_welch(struct hmm_3d_t *hmm, struct hmm_3d_t *hmm_est, struct sampl
 	prob = hmm_forward_scale_alpha(hmm, sample, sample_len, scale, alpha);
 	hmm_backward_scale_beta(hmm, sample, sample_len, scale, beta);
 	
+	/*
 	printf("ALPHA and BETA\n");	
 	for (t = 0; t < sample_len; t++)
 	{
@@ -318,7 +319,7 @@ void hmm_baum_welch(struct hmm_3d_t *hmm, struct hmm_3d_t *hmm_est, struct sampl
 		}
 		printf("]\n");
 	}
-	
+	*/
 	/* probability of taking the transition from state i to state j at time t */
 	for (t = 0; t < sample_len - 1; t++)
 	{
