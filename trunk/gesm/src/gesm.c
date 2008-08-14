@@ -1145,12 +1145,12 @@ static void cmd_model_new_cb(struct accel_3d_t accels[], unsigned int accel_len)
  */
 static void cmd_model_new_end(char *file)
 {
-	printf("reached cmd_model_new_end\n");
-	fflush(stdout);
+	//printf("reached cmd_model_new_end\n");
+	//fflush(stdout);
 	//hmm_print_3d(&hmm);
-	printf("state len: %d\n", hmm.state_len);
-	printf("wrote HMM\n");
-	fflush(stdout);
+	//printf("state len: %d\n", hmm.state_len);
+	//printf("wrote HMM\n");
+	//fflush(stdout);
 	hmm_write_3d(&hmm, file);
 	printf("Done.\n");
 	fflush(stdout);
@@ -1260,8 +1260,8 @@ static void cmd_model_train_cb(struct accel_3d_t accels[], unsigned int accel_le
  */
 static void cmd_model_train_end(char *file)
 {
-	printf("reached cmd_model_train_end\n");
-	fflush(stdout);
+	//printf("reached cmd_model_train_end\n");
+	//fflush(stdout);
 	hmm_write_3d(&hmm, file);
 	printf("Done.\n");
 	fflush(stdout);
