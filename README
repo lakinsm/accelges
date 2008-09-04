@@ -1,5 +1,26 @@
 Google Summer of Code 2008
 http://code.google.com/soc/2008/openmoko/appinfo.html?csaid=55BC4E4D615BA291
-Title: Accelerometer-based Gestures
-Student: Paul-Valentin Borza <gestures@borza.ro>
+Title: Accelerometer-based Gestures for Openmoko's Neo Freerunner
+Student: Paul-Valentin Borza <paul@borza.ro>
 Mentor: Daniel Willmann
+
+Abstract: The emphasis is on showing how machine learning approaches can help 
+recognizing an intuitive set of gestures that can easily be trained, and 
+performed by the owner of a modern mobile phone. These gestural user interfaces were designed for accelerometer-ready mobile phones, like Openmoko's Neo Freerunner, using continuous density left-to-right hidden Markov models. This project 
+touches on involuntary, and voluntary gestures, static, and dynamic 
+acceleration, multivariate Gaussian classifiers used in endpoint detection, 
+algorithmic implementations, runtime performance, and recognition accuracy. 
+Sponsored by Google Summer of Code 2008 and Openmoko Inc., this project is currently continuously listening for a dozen motion gestures on the Neo Freerunner.
+
+Videos:
+Openmoko's Neo Freerunner does motion gestures, and screen orientation
+	http://www.youtube.com/watch?v=K2S2rQUETwc
+Accelerometer-based gesture recognition for Nintento's Wii Remote
+	http://www.youtube.com/watch?v=MX50lXuJ28Q
+
+Installation Instructions for Openmoko's Neo Freerunner
+	http://wiki.openmoko.org/wiki/Accelerometer-based_Gestures
+
+Thanks,
+Paul
+
